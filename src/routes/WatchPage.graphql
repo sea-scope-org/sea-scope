@@ -1,0 +1,196 @@
+# Watch console — session watch board + live sessionUpdates stream.
+# Fragments are the single source of truth for WatchState fields on the client.
+
+fragment WatchFields on WatchState {
+    scenarioId
+    title
+    description
+    status
+    simMs
+    centerLat
+    centerLon
+    zoom
+    selectedMmsi
+    vessels {
+        mmsi
+        name
+        imo
+        shipType
+        flag
+        aisDark
+        riskScore
+        riskLevel
+        riskTrend
+        nearestAssetId
+        nearestAssetDistanceNm
+        activeFactors {
+            rule
+            scoreDelta
+            explanation
+            source
+        }
+        trackTail {
+            lat
+            lon
+        }
+        radarPosition {
+            lat
+            lon
+        }
+        position {
+            lat
+            lon
+            sog
+            cog
+            heading
+            timestamp
+        }
+    }
+    anomalies {
+        anomalyId
+        mmsi
+        kind
+        severity
+        title
+        summary
+        detectedAtSimMs
+        evidence
+    }
+    riskEvents {
+        riskEventId
+        mmsi
+        detectedAtSimMs
+        rule
+        scoreDelta
+        previousScore
+        newScore
+        explanation
+        source
+    }
+    incidents {
+        incidentId
+        mmsi
+        openedAtSimMs
+        closedAtSimMs
+        maxRiskScore
+        status
+        timeline {
+            eventId
+            detectedAtSimMs
+            eventType
+            source
+            explanation
+            riskChange
+        }
+    }
+    osintAlerts {
+        alertId
+        source
+        title
+        body
+        region
+    }
+    highRiskZones {
+        zoneId
+        name
+        ring {
+            lat
+            lon
+        }
+    }
+    protectedAssets {
+        assetId
+        name
+        type
+        riskRadiusNm
+        path {
+            lat
+            lon
+        }
+    }
+}
+
+query WatchPage {
+    currentSession {
+        sessionId
+        watch {
+            ...WatchFields
+        }
+        scenarios {
+            scenarioId
+            title
+            description
+        }
+    }
+}
+
+mutation VesselSelect($mmsi: ID) {
+    session {
+        vesselSelect(mmsi: $mmsi) {
+            ...WatchFields
+        }
+    }
+}
+
+mutation VesselIntelligenceRequest($mmsi: ID!) {
+    session {
+        vesselIntelligenceRequest(mmsi: $mmsi) {
+            success
+            referenceId
+        }
+    }
+}
+
+mutation AlertAcknowledge($incidentId: ID!) {
+    session {
+        alertAcknowledge(incidentId: $incidentId) {
+            ...WatchFields
+        }
+    }
+}
+
+mutation ScenarioReset {
+    session {
+        scenarioReset {
+            ...WatchFields
+        }
+    }
+}
+
+subscription SessionUpdates {
+    sessionUpdates {
+        __typename
+        ... on SessionUpdateWatchSnapshot {
+            watch {
+                ...WatchFields
+            }
+        }
+        ... on SessionUpdateAnomalyAppended {
+            anomaly {
+                anomalyId
+                mmsi
+                kind
+                severity
+                title
+                summary
+                detectedAtSimMs
+                evidence
+            }
+        }
+        ... on SessionUpdateIntelligence {
+            intelligence {
+                mmsi
+                vesselName
+                status
+                summary
+                whyFlagged
+                citations {
+                    label
+                    source
+                }
+                playbookSteps
+                generatedAt
+            }
+        }
+    }
+}

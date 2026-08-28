@@ -1,0 +1,28 @@
+import { eq } from 'drizzle-orm';
+import { users } from '../db/schema';
+import type { ServerRuntime } from '../domain/ServerRuntime';
+import type { GqlSAdminMutation, GqlSSession } from '../graphql/generated';
+
+// Gates the admin write namespace (`Mutation.admin`).
+//
+// Read-side equivalent: the `User.admin` resolver in `resolversCreate.ts`
+// runs the same `isAdmin` check but returns null instead of throwing, so the
+// field can be composed off the public `currentSession.user` shape (drives
+// admin entry points on public pages). The write side stays throw-on-mismatch —
+// `Mutation.admin` is non-nullable and the resolver throws when the caller
+// is not an admin so a bad request fails loudly. See
+// `docs/architecture/authorization-admin.md`.
+export async function guardAdminMutation(requestingSession: GqlSSession, serverRuntime: ServerRuntime): Promise<GqlSAdminMutation> {
+    if (!requestingSession.userId) {
+        throw new Error('Unauthorized');
+    }
+    const [row] = await serverRuntime.db
+        .select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.userId, requestingSession.userId))
+        .limit(1);
+    if (!row?.isAdmin) {
+        throw new Error('Unauthorized');
+    }
+    return { userId: requestingSession.userId } as unknown as GqlSAdminMutation;
+}

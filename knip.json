@@ -1,0 +1,43 @@
+{
+    "$schema": "https://unpkg.com/knip@6/schema.json",
+    "tags": ["-lintignore"],
+    "ignore": [
+        "src/server/graphql/generated.ts",
+        "src/web/graphql/generated.ts",
+
+        "src/server/graphql/extensions.ts",
+
+        "src/server/graphql/PubSubPostgres.ts",
+        "src/server/graphql/server.ts",
+        "src/server/jobs/index.ts",
+        "src/server/jobs/types.ts",
+        "src/server/utils/serverToken.ts",
+        "src/web/components/base/**/*.tsx",
+        "src/web/components/Reveal.tsx",
+        "src/web/hooks/use-mobile.ts",
+        "src/web/hooks/useDebouncedValue.ts",
+        "src/web/hooks/useVisualViewport.ts",
+        "src/web/hooks/useHotkeys.ts",
+        "src/web/hooks/useInView.ts",
+        "src/server/agents/chatDelegateParentPreWrite.ts",
+        "scripts/migrationsReconcile.ts",
+        ".storybook/vite.config.ts"
+    ],
+    "ignoreDependencies": [
+        "@tanstack/react-devtools",
+        "@tanstack/react-form",
+        "@tanstack/react-router-devtools",
+        "@tanstack/react-router-ssr-query",
+        "@tanstack/router-plugin",
+        "graphql-subscriptions",
+        "@graphql-codegen/client-preset",
+        "graphql-codegen-typescript-validation-schema",
+        "@graphql-codegen/typescript-validation-schema",
+        "vaul",
+        "@shadcn/react"
+    ],
+    "ignoreIssues": {
+        "src/shared/index.ts": ["exports", "types"],
+        "src/server/agents/agentScaffolding.ts": ["exports", "types"]
+    }
+}
