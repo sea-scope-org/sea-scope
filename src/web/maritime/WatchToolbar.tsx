@@ -18,6 +18,11 @@ export function WatchToolbar({ watch, onReset, className }: WatchToolbarProps) {
     const openAlerts = watch.incidents.filter((i) => i.status === 'open').length;
     const alertLabel = openAlerts === 1 ? '1 alert' : `${openAlerts} alerts`;
 
+    const bandCounts = { green: 0, yellow: 0, orange: 0, red: 0 };
+    for (const vessel of watch.vessels) {
+        bandCounts[vessel.riskLevel] += 1;
+    }
+
     return (
         <header
             className={cn(
@@ -52,6 +57,21 @@ export function WatchToolbar({ watch, onReset, className }: WatchToolbarProps) {
                 >
                     T+{formatHms(simSec)}
                 </Badge>
+
+                <Separator orientation="vertical" className="h-5" />
+
+                <p
+                    className="font-mono text-[11px] tabular-nums text-muted-foreground"
+                    title={`${watch.vessels.length} vessels by risk band`}
+                >
+                    <span className="text-destructive">{bandCounts.red}</span>
+                    <span className="text-border"> / </span>
+                    <span className="text-orange-700">{bandCounts.orange}</span>
+                    <span className="text-border"> / </span>
+                    <span className="text-amber-800">{bandCounts.yellow}</span>
+                    <span className="text-border"> / </span>
+                    <span className="text-emerald-800">{bandCounts.green}</span>
+                </p>
 
                 {openAlerts > 0 ? (
                     <>

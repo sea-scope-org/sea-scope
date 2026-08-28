@@ -19,7 +19,7 @@ Foregrounds on primary use `--primary-foreground` (`#f4f3ec`); accent and second
 
 | Option                           | Pros                                                   | Cons                                         |
 | -------------------------------- | ------------------------------------------------------ | -------------------------------------------- |
-| Light-only brand tokens (chosen) | One visual identity, no flash / hydration theme script | Chart basemap stays dark Carto for geography |
+| Light-only brand tokens (chosen) | One visual identity, no flash / hydration theme script | Chart uses a warm-tinted Positron basemap    |
 | System light/dark + toggle       | Familiar OS sync                                       | Dilutes brand; needs flash-prevention script |
 | Dual token sets without toggle   | Ready for later dark                                   | Dead weight while product is light-only      |
 
@@ -29,7 +29,7 @@ Foregrounds on primary use `--primary-foreground` (`#f4f3ec`); accent and second
 - `src/routes/__root.tsx` — `theme-color` meta `#f4f3ec`; no theme-init script
 - `public/manifest.json` — `theme_color` / `background_color` `#f4f3ec`
 - Toasts force `theme="light"` in `src/web/components/base/sonner.tsx`
-- `/watch` chrome (toolbar, sidebar, page shell) consumes the same light tokens as marketing and chat; only the MapLibre basemap stays Carto
-  Dark Matter — see [`docs/features/watch-console.md`](../features/watch-console.md)
+- `/watch` chrome uses the same light tokens as marketing and chat; the MapLibre chart starts from Carto Positron and is retinted to warm
+  bronze land / muted sea on load (`navalChartTintApply`) — see [`docs/features/watch-console.md`](../features/watch-console.md)
 
 Do not reintroduce a theme toggle or a `.dark { … }` token block without updating this doc.

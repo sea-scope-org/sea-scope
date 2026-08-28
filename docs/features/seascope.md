@@ -58,7 +58,7 @@ Traditional VTS answers “what is happening?” Global intel answers “what do
 
 Curated Galaxy Leader replay + rule-based risk engine (MAP → PRIORITY → WHY → ALERT) + anonymous cookie sessions + `sessionUpdates` SSE.
 Chat remains available under `Mutation.session` (silent Operator user for authorship FKs). No login/signup product surface. MapLibre chart
-kept (dark Carto basemap); risk styling and Cable C17 layered on top without geography rewrite.
+kept (warm-tinted Carto Positron — bronze land / muted sea); risk styling and Cable C17 layered on top without geography rewrite.
 
 ## Out of scope (MVP)
 

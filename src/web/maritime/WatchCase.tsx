@@ -1,0 +1,294 @@
+import { ChevronDownIcon } from 'lucide-react';
+import { useState } from 'react';
+import { Badge } from '../components/base/badge';
+import { Button } from '../components/base/button';
+import { Spinner } from '../components/base/spinner';
+import type { GqlCVesselIntelligence } from '../graphql/generated';
+import { cn } from '../utils/cn';
+import { assetName, IntelligenceBrief, RiskBadge, TrendIcon } from './watchSidebarShared';
+import type { Anomaly, Incident, RiskEvent, Vessel, WatchState } from './watchSidebarShared';
+
+type EvidencePanel = 'timeline' | 'anomalies' | 'brief';
+
+export interface WatchCaseProps {
+    watch: WatchState;
+    vessel: Vessel;
+    intelligence: GqlCVesselIntelligence | null;
+    intelligenceBusy: boolean;
+    onRequestIntelligence: (mmsi: string) => void;
+    onAcknowledgeAlert: (incidentId: string) => void;
+}
+
+export function WatchCase({ watch, vessel, intelligence, intelligenceBusy, onRequestIntelligence, onAcknowledgeAlert }: WatchCaseProps) {
+    const assetsById = new Map(watch.protectedAssets.map((a) => [a.assetId, a]));
+    const asset = assetName(vessel, assetsById);
+    const vesselAnomalies = watch.anomalies.filter((a) => a.mmsi === vessel.mmsi);
+    const vesselRiskEvents = watch.riskEvents.filter((e) => e.mmsi === vessel.mmsi);
+    const vesselIncident = watch.incidents.find((i) => i.mmsi === vessel.mmsi && i.status !== 'closed') ?? null;
+    const briefForSelection = intelligence && intelligence.mmsi === vessel.mmsi ? intelligence : null;
+
+    const defaultPanel = resolveDefaultPanel({
+        hasOpenIncident: vesselIncident?.status === 'open',
+        riskEventCount: vesselRiskEvents.length,
+        hasBrief: Boolean(briefForSelection),
+    });
+    const [panel, setPanel] = useState<EvidencePanel>(defaultPanel);
+    const [navOpen, setNavOpen] = useState(false);
+
+    const factors = [...vessel.activeFactors].reverse().slice(0, 3);
+
+    return (
+        <div className="flex min-h-0 flex-1 flex-col">
+            <div className="shrink-0 space-y-3 border-b border-sidebar-border px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                        <p className="font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
+                            MMSI {vessel.mmsi}
+                            {vessel.imo ? ` · IMO ${vessel.imo}` : ''}
+                        </p>
+                        <h3 className="truncate text-sm font-semibold text-foreground">{vessel.name}</h3>
+                        {asset ? (
+                            <p className="truncate text-[11px] text-primary">
+                                {asset}
+                                {vessel.nearestAssetDistanceNm != null ? ` · ${vessel.nearestAssetDistanceNm.toFixed(2)} nm` : ''}
+                            </p>
+                        ) : null}
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                        <div className="flex items-center gap-1.5">
+                            <TrendIcon trend={vessel.riskTrend} />
+                            <RiskBadge level={vessel.riskLevel} score={vessel.riskScore} />
+                        </div>
+                        {vessel.aisDark ? (
+                            <Badge
+                                variant="destructive"
+                                className="rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase"
+                            >
+                                AIS DARK
+                            </Badge>
+                        ) : null}
+                    </div>
+                </div>
+
+                <div>
+                    <button
+                        type="button"
+                        className="flex w-full items-center justify-between gap-2 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase hover:text-foreground"
+                        aria-expanded={navOpen}
+                        onClick={() => setNavOpen((open) => !open)}
+                    >
+                        Nav data
+                        <ChevronDownIcon className={cn('size-3.5 transition-transform', navOpen ? 'rotate-180' : null)} aria-hidden />
+                    </button>
+                    {navOpen ? <NavData vessel={vessel} /> : null}
+                </div>
+
+                <div>
+                    <p className="mb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Why now</p>
+                    {factors.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Baseline monitoring — no elevated factors.</p>
+                    ) : (
+                        <ul className="flex flex-col gap-1">
+                            {factors.map((f) => (
+                                <li key={f.rule} className="flex gap-2 text-[11px] text-foreground">
+                                    <span className="shrink-0 font-mono text-amber-700">+{f.scoreDelta}</span>
+                                    <span>{f.explanation}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    {vesselIncident?.status === 'open' ? (
+                        <Button type="button" size="xs" variant="destructive" onClick={() => onAcknowledgeAlert(vesselIncident.incidentId)}>
+                            Acknowledge
+                        </Button>
+                    ) : null}
+                    <Button
+                        type="button"
+                        size="xs"
+                        variant="outline"
+                        disabled={intelligenceBusy}
+                        onClick={() => onRequestIntelligence(vessel.mmsi)}
+                    >
+                        {intelligenceBusy ? (
+                            <>
+                                <Spinner data-icon="inline-start" aria-hidden />
+                                Running…
+                            </>
+                        ) : (
+                            'Request briefing'
+                        )}
+                    </Button>
+                </div>
+            </div>
+
+            <div className="flex min-h-0 flex-1 flex-col">
+                <EvidenceTabs panel={panel} onPanelChange={setPanel} anomalyCount={vesselAnomalies.length} briefBusy={intelligenceBusy} />
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+                    {panel === 'timeline' ? <TimelinePanel riskEvents={vesselRiskEvents} incident={vesselIncident} /> : null}
+                    {panel === 'anomalies' ? <AnomaliesPanel anomalies={vesselAnomalies} /> : null}
+                    {panel === 'brief' ? <BriefPanel intelligence={briefForSelection} busy={intelligenceBusy} /> : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function resolveDefaultPanel(input: { hasOpenIncident: boolean; riskEventCount: number; hasBrief: boolean }): EvidencePanel {
+    if (input.hasOpenIncident || input.riskEventCount > 0) return 'timeline';
+    if (input.hasBrief) return 'brief';
+    return 'timeline';
+}
+
+function NavData({ vessel }: { vessel: Vessel }) {
+    const position = vessel.position;
+    return (
+        <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+            <Field label="Type" value={vessel.shipType} />
+            <Field label="Flag" value={vessel.flag} />
+            <Field label="SOG" value={position ? `${position.sog.toFixed(1)} kn` : '—'} />
+            <Field label="COG" value={position ? `${Math.round(position.cog)}°` : '—'} />
+            <Field label="Heading" value={position ? `${Math.round(position.heading)}°` : '—'} />
+            <Field label="Position" value={position ? `${position.lat.toFixed(3)}, ${position.lon.toFixed(3)}` : '—'} />
+        </dl>
+    );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+    return (
+        <div>
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="font-mono text-foreground">{value}</dd>
+        </div>
+    );
+}
+
+function EvidenceTabs({
+    panel,
+    onPanelChange,
+    anomalyCount,
+    briefBusy,
+}: {
+    panel: EvidencePanel;
+    onPanelChange: (panel: EvidencePanel) => void;
+    anomalyCount: number;
+    briefBusy: boolean;
+}) {
+    const tabs: { id: EvidencePanel; label: string }[] = [
+        { id: 'timeline', label: 'Timeline' },
+        { id: 'anomalies', label: anomalyCount > 0 ? `Anomalies (${anomalyCount})` : 'Anomalies' },
+        { id: 'brief', label: briefBusy ? 'Brief…' : 'Brief' },
+    ];
+
+    return (
+        <div role="tablist" aria-label="Evidence" className="flex shrink-0 gap-0 border-b border-sidebar-border px-2">
+            {tabs.map((tab) => {
+                const selected = panel === tab.id;
+                return (
+                    <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={selected}
+                        className={cn(
+                            '-mb-px border-b-2 px-3 py-2 text-[11px] font-semibold tracking-wide uppercase transition-colors',
+                            selected ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                        )}
+                        onClick={() => onPanelChange(tab.id)}
+                    >
+                        {tab.label}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+type TimelineEntry = {
+    key: string;
+    simMs: number;
+    kind: string;
+    text: string;
+};
+
+function TimelinePanel({ riskEvents, incident }: { riskEvents: RiskEvent[]; incident: Incident | null }) {
+    const entries: TimelineEntry[] = [
+        ...riskEvents.map((event) => ({
+            key: event.riskEventId,
+            simMs: event.detectedAtSimMs,
+            kind: 'Score',
+            text: `${event.previousScore} → ${event.newScore} — ${event.explanation}`,
+        })),
+        ...(incident?.timeline ?? []).map((e) => ({
+            key: e.eventId,
+            simMs: e.detectedAtSimMs,
+            kind: e.eventType,
+            text: e.explanation,
+        })),
+    ].sort((a, b) => a.simMs - b.simMs);
+
+    if (entries.length === 0) {
+        return <p className="text-xs text-muted-foreground">No timeline events yet.</p>;
+    }
+
+    return (
+        <ul className="flex flex-col gap-2">
+            {entries.map((entry) => (
+                <li key={entry.key} className="text-[11px] text-muted-foreground">
+                    <span className="font-mono text-foreground">T+{Math.floor(entry.simMs / 60_000)}m</span>{' '}
+                    <span className="font-medium text-foreground">{entry.kind}</span> — {entry.text}
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+function AnomaliesPanel({ anomalies }: { anomalies: Anomaly[] }) {
+    if (anomalies.length === 0) {
+        return <p className="text-xs text-muted-foreground">No anomalies for this contact.</p>;
+    }
+
+    return (
+        <ul className="flex flex-col gap-2">
+            {anomalies.map((anomaly) => (
+                <li
+                    key={anomaly.anomalyId}
+                    className={cn(
+                        'rounded-md border border-l-2 border-border px-2.5 py-2',
+                        anomaly.severity === 'critical'
+                            ? 'border-l-destructive'
+                            : anomaly.severity === 'high'
+                              ? 'border-l-amber-400'
+                              : 'border-l-border',
+                    )}
+                >
+                    <div className="flex items-center justify-between gap-2">
+                        <Badge variant="outline" className="rounded-sm px-1.5 py-0 text-[10px] font-semibold tracking-wider uppercase">
+                            {anomaly.severity}
+                        </Badge>
+                        <span className="font-mono text-[10px] text-muted-foreground">{anomaly.kind}</span>
+                    </div>
+                    <p className="mt-1 text-xs font-medium text-foreground">{anomaly.title}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{anomaly.summary}</p>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+function BriefPanel({ intelligence, busy }: { intelligence: GqlCVesselIntelligence | null; busy: boolean }) {
+    if (intelligence) {
+        return <IntelligenceBrief intelligence={intelligence} />;
+    }
+    if (busy) {
+        return (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Spinner className="size-3.5" aria-hidden />
+                Generating briefing…
+            </div>
+        );
+    }
+    return <p className="text-xs text-muted-foreground">No briefing yet — request starts the analysis.</p>;
+}

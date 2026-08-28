@@ -1,9 +1,11 @@
 import { setWorkerUrl } from 'maplibre-gl';
+import type { Map as MapLibreMap } from 'maplibre-gl';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import Map, { Layer, Marker, NavigationControl, Source } from 'react-map-gl/maplibre';
 import type { GqlCWatchFieldsFragment } from '../graphql/generated';
 import { cn } from '../utils/cn';
+import { navalChartTintApply } from './navalChartTint';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // MapLibre v6 workers are separate ESM modules — Vite needs an explicit URL
@@ -63,10 +65,14 @@ export function NavalMapClient({
     const assetGeoJson = useMemo(() => assetsToGeoJson(protectedAssets), [protectedAssets]);
     const trackGeoJson = useMemo(() => tracksToGeoJson(vessels), [vessels]);
 
+    const onMapLoad = useCallback((event: { target: MapLibreMap }) => {
+        navalChartTintApply(event.target);
+    }, []);
+
     return (
         <div className={cn('relative size-full', className)}>
             <Map
-                mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+                mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
                 initialViewState={{
                     latitude: centerLat,
                     longitude: centerLon,
@@ -74,6 +80,7 @@ export function NavalMapClient({
                 }}
                 style={{ width: '100%', height: '100%' }}
                 attributionControl={false}
+                onLoad={onMapLoad}
             >
                 <NavigationControl position="bottom-left" showCompass={false} />
 
@@ -82,15 +89,15 @@ export function NavalMapClient({
                         id="high-risk-zones-fill"
                         type="fill"
                         paint={{
-                            'fill-color': '#f59e0b',
-                            'fill-opacity': 0.12,
+                            'fill-color': '#b45309',
+                            'fill-opacity': 0.16,
                         }}
                     />
                     <Layer
                         id="high-risk-zones-line"
                         type="line"
                         paint={{
-                            'line-color': '#fbbf24',
+                            'line-color': '#9a3412',
                             'line-width': 1.5,
                             'line-dasharray': [2, 1],
                         }}
@@ -102,9 +109,9 @@ export function NavalMapClient({
                         id="protected-assets-line"
                         type="line"
                         paint={{
-                            'line-color': '#38bdf8',
+                            'line-color': '#1e179f',
                             'line-width': 2.5,
-                            'line-opacity': 0.85,
+                            'line-opacity': 0.9,
                         }}
                     />
                 </Source>
@@ -120,13 +127,13 @@ export function NavalMapClient({
                                 'red',
                                 '#ef4444',
                                 'orange',
-                                '#fb923c',
+                                '#ea580c',
                                 'yellow',
-                                '#fbbf24',
-                                '#059669',
+                                '#d97706',
+                                '#047857',
                             ],
                             'line-width': ['match', ['get', 'riskLevel'], 'red', 2.5, 'orange', 2, 1.25],
-                            'line-opacity': 0.55,
+                            'line-opacity': 0.7,
                         }}
                     />
                 </Source>
@@ -168,7 +175,7 @@ export function NavalMapClient({
                                         'block size-0 border-x-transparent transition-colors',
                                         style.size,
                                         style.border,
-                                        selected && vessel.riskLevel === 'green' && 'border-b-accent',
+                                        selected && vessel.riskLevel === 'green' && 'border-b-primary',
                                     )}
                                 />
                             </button>
@@ -183,7 +190,7 @@ export function NavalMapClient({
                         <Marker key={`radar-${vessel.mmsi}`} longitude={radar.lon} latitude={radar.lat} anchor="center">
                             <div
                                 title={`Simulated radar · ${vessel.name}`}
-                                className="size-2.5 rotate-45 border border-violet-300/80 bg-violet-500/50"
+                                className="size-2.5 rotate-45 border border-foreground/70 bg-violet-700/70"
                                 aria-hidden
                             />
                         </Marker>
