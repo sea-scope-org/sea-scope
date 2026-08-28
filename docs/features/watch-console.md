@@ -31,7 +31,7 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 | Marketing card layout                      | Familiar                           | Wrong density for an ops console                                  |
 | Navy/cyan full-dark chrome                 | Ops-console cliché                 | Breaks the light-only brand in [`theme.md`](../styles/theme.md)   |
 | Light brand chrome + dark chart            | Chart contrast                     | Chart is a dark island inside light chrome                        |
-| Stock Positron (untinted)                  | Free light basemap                 | Washed-out white land; feels unfinished next to cream chrome      |
+| Stock Positron (no tint)                   | Free light basemap                 | Washed-out white land; feels unfinished next to cream chrome      |
 | Warm-tinted Positron chart (chosen)        | Bronze land / muted sea; one brand | Runtime paint overrides tied to Positron layer ids                |
 | Always-expanded section dump               | Everything visible                 | Noisy; no progressive disclosure — replaced by Queue ↔ Case       |
 | Queue ↔ Case + one evidence panel (chosen) | Clear triage then investigate      | Deep evidence requires an explicit panel switch                   |

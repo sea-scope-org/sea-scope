@@ -153,13 +153,14 @@ const LABEL_HALO_LAYERS = [
 function setPaint(map: MapLibreMap, layerId: string, property: string, value: unknown) {
     if (!map.getLayer(layerId)) return;
     try {
-        map.setPaintProperty(layerId, property, value);
+        // Paint keys are layer-type-specific; layer ids come from Carto Positron.
+        map.setPaintProperty(layerId, property as never, value as never);
     } catch {
         // Layer type / property mismatch on style revisions — skip quietly.
     }
 }
 
-/** Retint a loaded Positron style into the SeaScope warm chart palette. */
+/** Apply the SeaScope warm chart palette onto a loaded Positron style. */
 export function navalChartTintApply(map: MapLibreMap) {
     setPaint(map, 'background', 'background-color', CHART_LAND);
 
