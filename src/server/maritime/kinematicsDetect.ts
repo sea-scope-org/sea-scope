@@ -6,11 +6,9 @@ const DEG_TO_RAD = Math.PI / 180;
 export type KinematicsDetectOpts = {
     simMs?: number;
     recentHeadings?: number[];
-    inHighRiskZone?: boolean;
     speedDropThresholdKn?: number;
     speedDropWindowMs?: number;
     zigZagThresholdDeg?: number;
-    loiterSogKn?: number;
     impossibleSpeedKn?: number;
 };
 
@@ -46,20 +44,6 @@ export function haversineNm(a: LatLon, b: LatLon): number {
     const lat2 = b.lat * DEG_TO_RAD;
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
     return 2 * EARTH_RADIUS_NM * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-
-export function pointInPolygon(point: LatLon, ring: LatLon[]): boolean {
-    if (ring.length < 3) return false;
-    let inside = false;
-    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-        const xi = ring[i]!.lon;
-        const yi = ring[i]!.lat;
-        const xj = ring[j]!.lon;
-        const yj = ring[j]!.lat;
-        const intersects = yi > point.lat !== yj > point.lat && point.lon < ((xj - xi) * (point.lat - yi)) / (yj - yi) + xi;
-        if (intersects) inside = !inside;
-    }
-    return inside;
 }
 
 export function aisGapDetect(
@@ -100,7 +84,6 @@ export function kinematicsDetect(prev: AisPosition | null, curr: AisPosition, op
     const speedDropThresholdKn = opts.speedDropThresholdKn ?? 8;
     const speedDropWindowMs = opts.speedDropWindowMs ?? 5 * 60_000;
     const zigZagThresholdDeg = opts.zigZagThresholdDeg ?? 90;
-    const loiterSogKn = opts.loiterSogKn ?? 2;
     const impossibleSpeedKn = opts.impossibleSpeedKn ?? 60;
 
     if (prev) {
@@ -168,20 +151,6 @@ export function kinematicsDetect(prev: AisPosition | null, curr: AisPosition, op
                 ),
             );
         }
-    }
-
-    if (opts.inHighRiskZone && curr.sog <= loiterSogKn) {
-        anomalies.push(
-            makeAnomaly(
-                curr.mmsi,
-                'loitering',
-                'medium',
-                'Loitering in high-risk zone',
-                `Vessel holding ${curr.sog.toFixed(1)} kn inside a high-risk zone.`,
-                simMs,
-                { sog: curr.sog, lat: curr.lat, lon: curr.lon, loiterSogKn },
-            ),
-        );
     }
 
     return anomalies;

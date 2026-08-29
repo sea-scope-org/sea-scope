@@ -8,6 +8,9 @@ const BASE_ISO = '2023-11-19T12:00:00.000Z';
 
 const GALAXY_MMSI = '538090574';
 const DECOY_MMSI = '477123456';
+/** Supporting Yellow contacts — keep Demo Needs attention at four flagged ships. */
+const SPEED_DROP_MMSI = '636019001';
+const ZIGZAG_MMSI = '538008201';
 
 function simIso(simMs: number): string {
     return new Date(Date.parse(BASE_ISO) + simMs).toISOString();
@@ -76,22 +79,8 @@ const vessels: VesselIdentity[] = [
         shipType: 'Bulk Carrier',
         flag: 'Hong Kong',
     },
-    { mmsi: '636019001', name: 'RED SEA TRADER', shipType: 'General Cargo', flag: 'Liberia', callSign: 'D5AB1' },
-    { mmsi: '538008201', name: 'BAB MANDAB EXPRESS', shipType: 'Container Ship', flag: 'Marshall Islands', callSign: 'V7YZ2' },
-    { mmsi: '311000441', name: 'ADEN STAR', shipType: 'Tanker', flag: 'Bahamas', callSign: 'C6XY3' },
-    { mmsi: '636092118', name: 'HODEIDAH SPIRIT', shipType: 'Oil Tanker', flag: 'Liberia', callSign: 'A8PQ4' },
-    { mmsi: '249000771', name: 'SUEZ BOUND', shipType: 'Container Ship', flag: 'Malta', callSign: '9HA5K' },
-    { mmsi: '563000882', name: 'SINGAPORE BRIDGE', shipType: 'Container Ship', flag: 'Singapore', callSign: '9V8L2' },
-    { mmsi: '477334001', name: 'ORIENT PEARL', shipType: 'Bulk Carrier', flag: 'Hong Kong', callSign: 'VRCD9' },
-    { mmsi: '538071122', name: 'MARSHALL GLORY', shipType: 'Vehicle Carrier', flag: 'Marshall Islands', callSign: 'V7MM8' },
-    { mmsi: '636015533', name: 'LIBERIA WAVE', shipType: 'General Cargo', flag: 'Liberia', callSign: 'D5LW6' },
-    { mmsi: '311001992', name: 'CARIBBEAN TRADER', shipType: 'Ro-Ro', flag: 'Bahamas', callSign: 'C6RT1' },
-    { mmsi: '235089441', name: 'BRITANNIA GULF', shipType: 'Tanker', flag: 'United Kingdom', callSign: 'MAFG7' },
-    { mmsi: '366998221', name: 'PACIFIC WATCH', shipType: 'Research Vessel', flag: 'United States', callSign: 'WDPW2' },
-    { mmsi: '710000331', name: 'ATLANTICO SUL', shipType: 'Bulk Carrier', flag: 'Brazil', callSign: 'PPAS3' },
-    { mmsi: '419001556', name: 'MUMBAI MARINER', shipType: 'General Cargo', flag: 'India', callSign: 'VTMM5' },
-    { mmsi: '622121001', name: 'CAIRO VOYAGER', shipType: 'Passenger', flag: 'Egypt', callSign: 'SUCV1' },
-    { mmsi: '470001882', name: 'GULF FALCON', shipType: 'Tug', flag: 'UAE', callSign: 'A6GF8' },
+    { mmsi: SPEED_DROP_MMSI, name: 'RED SEA TRADER', shipType: 'General Cargo', flag: 'Liberia', callSign: 'D5AB1' },
+    { mmsi: ZIGZAG_MMSI, name: 'BAB MANDAB EXPRESS', shipType: 'Container Ship', flag: 'Marshall Islands', callSign: 'V7YZ2' },
 ];
 
 function buildGalaxyLeaderTrack(): AisPosition[] {
@@ -147,31 +136,33 @@ function buildDecoyTrack(): AisPosition[] {
     return [...transit, ...afterJump];
 }
 
-function buildBackgroundTracks(): Record<string, AisPosition[]> {
-    const specs: Array<{ mmsi: string; lat: number; lon: number; sog: number; cog: number }> = [
-        { mmsi: '636019001', lat: 14.55, lon: 42.6, sog: 12.0, cog: 350 },
-        { mmsi: '538008201', lat: 14.2, lon: 42.7, sog: 16.5, cog: 5 },
-        { mmsi: '311000441', lat: 14.85, lon: 42.45, sog: 13.2, cog: 172 },
-        { mmsi: '636092118', lat: 14.4, lon: 42.2, sog: 10.8, cog: 155 },
-        { mmsi: '249000771', lat: 15.05, lon: 42.55, sog: 15.0, cog: 185 },
-        { mmsi: '563000882', lat: 14.1, lon: 42.9, sog: 17.2, cog: 355 },
-        { mmsi: '477334001', lat: 14.65, lon: 41.95, sog: 11.0, cog: 95 },
-        { mmsi: '538071122', lat: 14.95, lon: 42.8, sog: 14.5, cog: 200 },
-        { mmsi: '636015533', lat: 14.3, lon: 42.5, sog: 9.5, cog: 340 },
-        { mmsi: '311001992', lat: 14.75, lon: 42.1, sog: 13.8, cog: 160 },
-        { mmsi: '235089441', lat: 15.15, lon: 42.35, sog: 12.4, cog: 178 },
-        { mmsi: '366998221', lat: 14.5, lon: 42.85, sog: 6.0, cog: 270 },
-        { mmsi: '710000331', lat: 14.05, lon: 42.4, sog: 10.2, cog: 15 },
-        { mmsi: '419001556', lat: 14.88, lon: 42.65, sog: 11.8, cog: 190 },
-        { mmsi: '622121001', lat: 14.35, lon: 42.15, sog: 8.5, cog: 80 },
-        { mmsi: '470001882', lat: 14.6, lon: 42.55, sog: 4.2, cog: 220 },
-    ];
+/** Sudden SOG collapse — Yellow attention without competing with Galaxy Leader. */
+function buildSpeedDropTrack(): AisPosition[] {
+    const dropMs = 22 * 60_000;
+    const before = trackTransit(SPEED_DROP_MMSI, START_MS, dropMs, 14.55, 42.6, 12.0, 350, 0);
+    const last = before[before.length - 1]!;
+    const after = trackTransit(SPEED_DROP_MMSI, dropMs + TICK_MS, END_MS, last.lat, last.lon, 2.5, 350, 0);
+    return [...before, ...after];
+}
 
-    const tracks: Record<string, AisPosition[]> = {};
-    for (const s of specs) {
-        tracks[s.mmsi] = trackTransit(s.mmsi, START_MS, END_MS, s.lat, s.lon, s.sog, s.cog, 1.5);
+/** Erratic headings plus a speed collapse — Yellow without competing with Galaxy Leader. */
+function buildZigZagTrack(): AisPosition[] {
+    const dropMs = 24 * 60_000;
+    const out: AisPosition[] = [];
+    let lat = 14.2;
+    let lon = 42.7;
+    const headings = [5, 95, 185, 275, 20, 140, 250, 40];
+    let phase = 0;
+    for (let t = START_MS; t <= END_MS; t += TICK_MS) {
+        const heading = headings[phase % headings.length]!;
+        const sog = t >= dropMs ? 3.0 : 16.5;
+        out.push(pos(ZIGZAG_MMSI, t, lat, lon, sog, heading, heading));
+        const next = advance(lat, lon, Math.max(sog, 0.5), heading, TICK_MS);
+        lat = next.lat;
+        lon = next.lon;
+        phase += 1;
     }
-    return tracks;
+    return out;
 }
 
 const osintAlerts: OsintAlert[] = [
@@ -237,7 +228,7 @@ const galaxyLeaderScenario: ScenarioDefinition = {
     scenarioId: SCENARIO_ID,
     title: 'Galaxy Leader — Southern Red Sea',
     description:
-        'Historical-style AIS replay of the November 2023 Galaxy Leader hijacking near Bab el-Mandeb: normal transit, sudden speed drop and heading changes, then AIS dark, with a sanctions-related decoy jump and UKMTO-style OSINT. Includes simulated radar/EO observations for contradiction demos. Protected cables/pipelines come from the real-WGS84 infrastructure catalog on the fused watch board.',
+        'Historical-style AIS replay of the November 2023 Galaxy Leader hijacking near Bab el-Mandeb: normal transit, sudden speed drop and heading changes, then AIS dark, with a sanctions-related decoy jump, two supporting Yellow contacts (speed drop; zigzag + speed drop), and UKMTO-style OSINT. Four demo ships raise attention flags; live AIS supplies the rest of the traffic. Includes simulated radar/EO observations for contradiction demos. Protected cables/pipelines come from the real-WGS84 infrastructure catalog on the fused watch board.',
     centerLat: 14.5,
     centerLon: 42.5,
     zoom: 8,
@@ -248,22 +239,10 @@ const galaxyLeaderScenario: ScenarioDefinition = {
     tracks: {
         [GALAXY_MMSI]: buildGalaxyLeaderTrack(),
         [DECOY_MMSI]: buildDecoyTrack(),
-        ...buildBackgroundTracks(),
+        [SPEED_DROP_MMSI]: buildSpeedDropTrack(),
+        [ZIGZAG_MMSI]: buildZigZagTrack(),
     },
     osintAlerts,
-    highRiskZones: [
-        {
-            zoneId: 'bab-el-mandeb-approach',
-            name: 'Bab el-Mandeb southern approach',
-            ring: [
-                { lat: 14.9, lon: 42.1 },
-                { lat: 14.9, lon: 42.85 },
-                { lat: 14.15, lon: 42.85 },
-                { lat: 14.15, lon: 42.1 },
-                { lat: 14.9, lon: 42.1 },
-            ],
-        },
-    ],
     protectedAssets: [],
     simulatedObservations,
 };

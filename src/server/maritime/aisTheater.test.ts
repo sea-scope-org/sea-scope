@@ -53,7 +53,7 @@ describe('aisTheaterMapPoint', () => {
 });
 
 describe('scenarioOffsetToBbox', () => {
-    it('maps high-risk zone rings and simulated observations into water', () => {
+    it('maps simulated observations into water', () => {
         const scenario: ScenarioDefinition = {
             scenarioId: 'test',
             title: 'test',
@@ -67,19 +67,6 @@ describe('scenarioOffsetToBbox', () => {
             vessels: [],
             tracks: {},
             osintAlerts: [],
-            highRiskZones: [
-                {
-                    zoneId: 'z',
-                    name: 'zone',
-                    ring: [
-                        { lat: 14.9, lon: 42.1 },
-                        { lat: 14.9, lon: 42.85 },
-                        { lat: 14.15, lon: 42.85 },
-                        { lat: 14.15, lon: 42.1 },
-                        { lat: 14.9, lon: 42.1 },
-                    ],
-                },
-            ],
             protectedAssets: [],
             simulatedObservations: [
                 { observationId: 'o', mmsi: '1', source: 'RADAR', activeFromSimMs: 0, lat: 14.48, lon: 42.52, confidence: 0.9 },
@@ -89,9 +76,6 @@ describe('scenarioOffsetToBbox', () => {
         const mapped = scenarioOffsetToBbox(scenario, GIBRALTAR);
         expect(mapped.centerLat).toBeCloseTo(36.0, 5);
         expect(mapped.centerLon).toBeCloseTo(-5.5, 5);
-        for (const p of mapped.highRiskZones[0]!.ring) {
-            expectInGibraltarWater(p);
-        }
         expectInGibraltarWater({ lat: mapped.simulatedObservations[0]!.lat, lon: mapped.simulatedObservations[0]!.lon });
     });
 });

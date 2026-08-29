@@ -13,16 +13,19 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
    state + in-flight lock). While Demo is off — including after the mutation settles — the client always hides mock contacts and theater
    overlays so a late feeder tick cannot flicker demo content back on. Turning Demo off only restores chart overview when Case was on a demo
    contact. Real undersea cables and pipelines (TeleGeography + EMODnet, true WGS84) stay on the chart either way. While Demo is off,
-   high-risk zones, simulated radar, and theater OSINT are hidden so live traffic is not scored against demo-only geometry. Toolbar badges
-   show live (and demo, when on) vessel counts. **Reset** clears selection / risk stickies for the session.
-4. Toolbar **Filters** toggles infrastructure types (submarine cables, oil & gas pipelines, other pipelines), chart layers (high-risk zones,
-   track tails, radar contacts), and vessel `shipType`s. Filters are client-only and shared by the chart, Queue, and toolbar band counts
-   (all on by default; **Show all** resets). A vessel already in **Case** stays on the map if its type is unchecked; Queue still hides
-   unchecked types.
+   simulated radar and theater OSINT are hidden so live traffic is not scored against demo-only geometry. Demo injects **four** curated
+   contacts that raise attention flags (Galaxy Leader, decoy jump, speed-drop, zigzag + speed-drop); live AIS stays on the map as quiet
+   Green clutter (no attention scores while Demo is on). Toolbar badges show live (and demo, when on) vessel counts. **Reset** clears
+   selection / risk stickies for the session.
+4. Toolbar **Filters** toggles infrastructure types (submarine cables, oil & gas pipelines, other pipelines), chart layers (track tails,
+   radar contacts), and vessel `shipType`s. Filters are shared by the chart, Queue, and toolbar band counts (all on by default; **Show all**
+   resets). They live in the `/watch` query string (`layersOff`, `shipTypesOff`) so reload and share preserve the lens. A vessel already in
+   **Case** stays on the map if its type is unchecked; Queue still hides unchecked types.
 5. Vessel marker color identifies the vessel family while an independent, discrete halo communicates elevated risk (none for Green, subtle
    Yellow, stronger Orange, and a slow pulsing Red). Heading, selection outline, and freshness opacity remain separate encodings. Protected
-   assets are drawn (navy solid cables, dashed bronze pipelines, with name labels from zoom 5+). Selecting a vessel opens **Case** mode in
-   the right rail.
+   assets are drawn (muted slate solid cables, dashed bronze pipelines, with name labels from zoom 5+). Selecting a vessel opens **Case**
+   mode in the right rail and writes `mmsi` into the URL; **Back to queue** / **Reset** clear it. Reload with `?mmsi=` re-opens that Case
+   (URL wins over leftover session selection).
 6. A shadcn `HoverCard` (`openDelay` 200 ms) on each vessel marker opens a read-only preview on hover or keyboard focus — identity, textual
    risk score/trend, navigation data, freshness (or AIS dark), available sensor context when present, the top Why now factor, and
    protected-asset relationship. Content portals above the chart (`side="top"`); the hovered (or selected) MapLibre marker still raises its
@@ -34,8 +37,8 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
    only strengthen the marker highlight. Open-incident focus gets a one-shot arrival ring. The camera never tracks live AIS ticks.
 8. Live ticks / anomalies / AI briefs arrive over `sessionUpdates` (imperative URQL subscription).
 9. Sidebar **Queue** (no selection): one ranked attention list (open Red incidents first, then red → orange → yellow), respecting ship-type
-   filters. Each row shows risk level + score with the trend arrow inside the same pill (rising ↑ / falling ↓ / stable →). Theater OSINT is a
-   collapsed disclosure at the bottom. Band counts live in the toolbar, not the rail.
+   filters. Each row shows risk level + score with the trend arrow inside the same pill (rising ↑ / falling ↓ / stable →). Theater OSINT is
+   a collapsed disclosure at the bottom. Band counts live in the toolbar, not the rail.
 10. Sidebar **Case** (vessel selected): sticky on `selectedMmsi` — if the contact drops off the live board, Case keeps the last-known vessel
     (with a short note) instead of silently returning to Queue. Sticky identity + risk pill (level, score, trend) + Why now (top factors) +
     primary **Request briefing** / Acknowledge / Locate on chart. The **Intelligence** stage sits below the actions (always visible): empty
@@ -75,8 +78,8 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 | Continuous vessel tracking                    | Always framed                                          | Steals operator agency during live AIS                                  |
 | Auto-focus when Red opens                     | Demo drama                                             | Steals focus mid-triage                                                 |
 | Auto-select once + generation cancel (chosen) | Demo opens Galaxy Leader without fighting the operator | Must repair server if a late auto mutation lands after an operator pick |
-| Viewport AIS union + 5° hard skip (chosen)    | Live ships follow the chart                            | Shared feed; zoomed-out maps stay on env bbox only                      |
-| Planet-wide AISStream box                     | “See everything”                                       | Overwhelm + sparse free coverage                                        |
+| URL lens in search (chosen)                   | Reload / share preserve Case + filters                 | Defaults must omit keys                                                 |
+| Client-only filter `useState`                 | Simple                                                 | Lost on reload — rejected                                               |
 
 ## Option chosen
 
@@ -88,7 +91,9 @@ Demo is off — not only while the mutation is in flight — so late feeder tick
 `WatchState` before fan-out NOTIFY). The mock feeder uses a run-generation guard so in-flight async ticks abort after stop. Mock loops on
 completion; `scenarioReset` clears fused board session state. Chart focus is sidebar-driven (`navalMapFocus.ts`): Queue / auto-select /
 Locate ease the camera; map clicks do not; live ticks never chase. Disabling Demo restores overview only when Case was on a mock contact.
-Debounced `aisViewportReport` unions each session’s ≤5° viewport into the shared AISStream subscription alongside `AISSTREAM_BBOX`.
+Debounced `aisViewportReport` unions each session’s ≤5° viewport into the shared AISStream subscription alongside `AISSTREAM_BBOX`. Case
+selection (`mmsi`) and filter offs (`layersOff`, `shipTypesOff`) persist in the `/watch` search string — defaults omit keys — so reload and
+shared links restore the same lens (see [Filter state in the URL](../architecture/api-layer.md#filter-state-in-the-url)).
 
 Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory player + risk engine:
 [`maritime-watch.md`](../architecture/maritime-watch.md).
@@ -102,7 +107,7 @@ Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory p
 | Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                                                                                                 |
 | Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `VesselMarker.tsx` + `VesselPreview.tsx` + `vesselVisuals.ts` + `navalChartTint.ts` + `navalMapFocus.ts`                                       |
 | Toolbar            | `src/web/maritime/WatchToolbar.tsx` (risk bands, alerts, Demo toggle, Filters)                                                                                                                          |
-| Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (infrastructure types + chart layers + ship types; owned in `watch.tsx`)                                                                    |
+| Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (infrastructure types + chart layers + ship types; URL search owned in `watch.tsx`)                                                         |
 | Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail)                                                                              |
 | Shared rail bits   | `src/web/maritime/watchSidebarShared.tsx`                                                                                                                                                               |
 | Layout shell       | `SidebarProvider` + `SidebarInset` in `watch.tsx`                                                                                                                                                       |
@@ -130,10 +135,12 @@ Chart gotchas (MapLibre v6 + Vite):
 
 The centralized vessel-family palette is Cargo blue (`#2563eb`), Tanker burgundy (`#9f1239`), Passenger purple (`#7c3aed`), Fishing green
 (`#16a34a`), Tug/service orange (`#ea580c`), Pleasure cyan (`#06b6d4`), Government black (`#111827`), and Unknown gray (`#64748b`). Tanker
-burgundy stays distinct from risk-red halos. Risk never changes that marker color. Yellow, Orange, and Red use increasingly strong
-fixed-size screen-space halos; Green has no halo. Only Red has a 2.4-second opacity pulse, with a strong static halo retained when reduced
-motion is requested. AIS dark adds an independent dashed ring (separate from risk). These HTML markers keep critical risk discoverable
-across zoom levels. Freshness fades the marker at one and three minutes and is also stated explicitly in the preview.
+burgundy stays distinct from risk-red halos. Risk never changes that marker color. The heading glyph is an SVG AIS-style chevron (pointed
+bow, notched stern) with a hard dark outer stroke and cream inner outline — not a CSS border-triangle or soft drop-shadow — so edges stay
+crisp on the chart. Yellow, Orange, and Red use increasingly strong fixed-size screen-space halos; Green has no halo. Only Red has a
+2.4-second opacity pulse, with a strong static halo retained when reduced motion is requested. AIS dark adds an independent dashed ring
+(separate from risk). These HTML markers keep critical risk discoverable across zoom levels. Freshness fades the marker at one and three
+minutes and is also stated explicitly in the preview.
 
 When track tails are enabled, every contact with a usable tail is drawn muted; the hovered or selected contact is strengthened. The MVP
 projection is constant course and speed over 10 and 20 minutes for the focused contact only. It is suppressed for positions at least three

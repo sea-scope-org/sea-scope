@@ -370,7 +370,6 @@ type ChatMessageCreateResult {
 enum AnomalyKind {
     speedDrop
     headingZigZag
-    loitering
     aisDark
     impossibleJump
 }
@@ -404,10 +403,8 @@ enum RiskRule {
     baseline
     speedDrop
     headingZigZag
-    loitering
     aisDark
     impossibleJump
-    zoneEntry
     nearProtectedAsset
     aisRadarMismatch
 }
@@ -529,12 +526,6 @@ type OsintAlert {
     relevanceTags: [String!]!
 }
 
-type HighRiskZone {
-    zoneId: ID!
-    name: String!
-    ring: [LatLon!]!
-}
-
 type ScenarioSummary {
     scenarioId: ID!
     title: String!
@@ -568,7 +559,6 @@ type WatchState {
     riskEvents: [RiskEvent!]!
     incidents: [Incident!]!
     osintAlerts: [OsintAlert!]!
-    highRiskZones: [HighRiskZone!]!
     protectedAssets: [ProtectedAsset!]!
     dataSources: [WatchDataSourceStatus!]!
 }

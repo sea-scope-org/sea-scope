@@ -20,12 +20,13 @@ import { IntelligenceSidebar } from '../web/maritime/IntelligenceSidebar';
 import { NavalMap } from '../web/maritime/NavalMap';
 import type { NavalMapFocusRequest } from '../web/maritime/navalMapFocus';
 import { useSessionUpdates } from '../web/maritime/useSessionUpdates';
-import type { WatchFiltersState } from '../web/maritime/watchFilterState';
+import type { WatchFiltersState, WatchSearch } from '../web/maritime/watchFilterState';
 import {
     vesselPassesQueueShipTypeFilter,
     vesselPassesShipTypeFilter,
-    watchFiltersCreate,
-    watchFiltersReconcile,
+    watchFiltersFromSearch,
+    watchSearchFromState,
+    watchSearchValidate,
     watchShipTypesFromVessels,
 } from '../web/maritime/watchFilterState';
 import { WatchToolbar } from '../web/maritime/WatchToolbar';
@@ -41,6 +42,7 @@ const GALAXY_LEADER_MMSI = '538090574';
 const BRIEFING_TIMEOUT_MS = 90_000;
 
 export const Route = createFileRoute('/watch')({
+    validateSearch: (search: Record<string, unknown>) => watchSearchValidate(search),
     loader: () => routeLoaderGraphqlClient(WatchPageDocument)(),
     staleTime: 0,
     head: () =>
@@ -60,6 +62,8 @@ function vesselHasOpenIncident(watch: GqlCWatchFieldsFragment, mmsi: string): bo
 
 function WatchPage() {
     const data = Route.useLoaderData();
+    const search = Route.useSearch();
+    const navigate = Route.useNavigate();
     const seedWatch = data.currentSession.watch;
 
     const [, vesselSelect] = useMutation(VesselSelectDocument);
@@ -86,6 +90,7 @@ function WatchPage() {
     const selectionGenerationRef = useRef(0);
     /** Sync lock — `selectionBusy` state alone can miss a click before re-render. */
     const selectionBusyRef = useRef(false);
+    const selectionHydratedRef = useRef(false);
     const viewportReportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const aisViewportReportRef = useRef(aisViewportReport);
     aisViewportReportRef.current = aisViewportReport;
@@ -94,10 +99,13 @@ function WatchPage() {
 
     const applyWatchRef = useRef<(watch: GqlCWatchFieldsFragment | null) => void>(() => undefined);
     const requestChartFocusRef = useRef<(mmsi: string | null, arrivalPulse: boolean) => void>(() => undefined);
+    const replaceWatchSearchRef = useRef<(patch: { mmsi?: string | null; filters?: WatchFiltersState }) => void>(() => undefined);
     const mockEnabledRef = useRef(false);
     const selectedMmsiRef = useRef<string | null>(null);
     const intelligenceBusyRef = useRef(false);
     const vesselsRef = useRef<GqlCWatchFieldsFragment['vessels']>([]);
+    const shipTypeCatalogRef = useRef<string[]>([]);
+    const filtersRef = useRef<WatchFiltersState>(watchFiltersFromSearch({}, []));
 
     const requestChartFocus = useCallback((mmsi: string | null, arrivalPulse: boolean) => {
         focusGenerationRef.current += 1;
@@ -108,6 +116,22 @@ function WatchPage() {
         });
     }, []);
     requestChartFocusRef.current = requestChartFocus;
+
+    const replaceWatchSearch = useCallback(
+        (patch: { mmsi?: string | null; filters?: WatchFiltersState }) => {
+            void navigate({
+                replace: true,
+                search: (prev: WatchSearch) =>
+                    watchSearchFromState({
+                        mmsi: patch.mmsi !== undefined ? patch.mmsi : (prev.mmsi ?? null),
+                        filters: patch.filters ?? filtersRef.current,
+                        catalog: shipTypeCatalogRef.current,
+                    }),
+            });
+        },
+        [navigate],
+    );
+    replaceWatchSearchRef.current = replaceWatchSearch;
 
     const onAnomalyAppended = useCallback(
         (anomaly: GqlCWatchFieldsFragment['anomalies'][number]) => {
@@ -125,6 +149,7 @@ function WatchPage() {
             // Participate in the Case ↔ Queue generation protocol so a late
             // vesselSelect cannot yank the operator back to Galaxy Leader.
             const generation = ++selectionGenerationRef.current;
+            replaceWatchSearchRef.current({ mmsi: GALAXY_LEADER_MMSI });
             setSelectedMmsiOverride(GALAXY_LEADER_MMSI);
 
             void (async () => {
@@ -141,6 +166,7 @@ function WatchPage() {
                 const next = result.data?.session.vesselSelect;
                 if (!next?.vessels.some((vessel) => vessel.mmsi === GALAXY_LEADER_MMSI)) {
                     autoSelectedRef.current = false;
+                    replaceWatchSearchRef.current({ mmsi: null });
                     setSelectedMmsiOverride(undefined);
                     return;
                 }
@@ -198,7 +224,6 @@ function WatchPage() {
             next = {
                 ...liveWatch,
                 title: 'SeaScope watch — live',
-                highRiskZones: [],
                 osintAlerts: [],
                 anomalies: [],
                 riskEvents: [],
@@ -219,16 +244,16 @@ function WatchPage() {
     selectedMmsiRef.current = displayWatch.selectedMmsi ?? null;
 
     const shipTypeCatalog = useMemo(() => watchShipTypesFromVessels(displayWatch.vessels), [displayWatch.vessels]);
-    const shipTypeCatalogKey = shipTypeCatalog.join('\0');
-    const previousCatalogRef = useRef<string[]>(shipTypeCatalog);
-    const [filters, setFilters] = useState<WatchFiltersState>(() => watchFiltersCreate(shipTypeCatalog));
+    shipTypeCatalogRef.current = shipTypeCatalog;
+    const filters = useMemo(() => watchFiltersFromSearch(search, shipTypeCatalog), [search, shipTypeCatalog]);
+    filtersRef.current = filters;
 
-    useEffect(() => {
-        const previous = previousCatalogRef.current;
-        const catalog = shipTypeCatalogKey.length > 0 ? shipTypeCatalogKey.split('\0') : [];
-        setFilters((current) => watchFiltersReconcile(current, catalog, previous));
-        previousCatalogRef.current = catalog;
-    }, [shipTypeCatalogKey]);
+    const onFiltersChange = useCallback(
+        (next: WatchFiltersState) => {
+            replaceWatchSearch({ filters: next });
+        },
+        [replaceWatchSearch],
+    );
 
     const countedVessels = useMemo(
         () => displayWatch.vessels.filter((v) => vesselPassesQueueShipTypeFilter(v, filters)),
@@ -244,6 +269,7 @@ function WatchPage() {
         async (mmsi: string, options: { focus: boolean }) => {
             const generation = ++selectionGenerationRef.current;
             selectionBusyRef.current = true;
+            replaceWatchSearch({ mmsi });
             setSelectedMmsiOverride(mmsi);
             setSelectionBusy(true);
             clearIntelligence();
@@ -258,6 +284,7 @@ function WatchPage() {
             const next = result.data?.session.vesselSelect;
             if (!next) {
                 selectionBusyRef.current = false;
+                replaceWatchSearch({ mmsi: liveWatch.selectedMmsi ?? null });
                 setSelectedMmsiOverride(undefined);
                 setSelectionBusy(false);
                 toast.error('Could not open case.');
@@ -269,7 +296,7 @@ function WatchPage() {
             setSelectedMmsiOverride(undefined);
             setSelectionBusy(false);
         },
-        [applyWatch, clearIntelligence, liveWatch, requestChartFocus, vesselSelect],
+        [applyWatch, clearIntelligence, liveWatch, replaceWatchSearch, requestChartFocus, vesselSelect],
     );
 
     const onSelectFromQueue = useCallback(
@@ -297,8 +324,10 @@ function WatchPage() {
     const onClearSelection = useCallback(async () => {
         if (selectionBusyRef.current) return;
 
+        const previousMmsi = selectedMmsiRef.current;
         const generation = ++selectionGenerationRef.current;
         selectionBusyRef.current = true;
+        replaceWatchSearch({ mmsi: null });
         setSelectedMmsiOverride(null);
         setSelectionBusy(true);
         clearIntelligence();
@@ -311,6 +340,7 @@ function WatchPage() {
         const next = result.data?.session.vesselSelect;
         if (!next) {
             selectionBusyRef.current = false;
+            replaceWatchSearch({ mmsi: previousMmsi });
             setSelectedMmsiOverride(undefined);
             setSelectionBusy(false);
             toast.error('Could not return to queue.');
@@ -321,7 +351,7 @@ function WatchPage() {
         selectionBusyRef.current = false;
         setSelectedMmsiOverride(undefined);
         setSelectionBusy(false);
-    }, [applyWatch, clearIntelligence, requestChartFocus, vesselSelect]);
+    }, [applyWatch, clearIntelligence, replaceWatchSearch, requestChartFocus, vesselSelect]);
 
     const onAcknowledgeAlert = useCallback(
         async (incidentId: string) => {
@@ -338,6 +368,7 @@ function WatchPage() {
         autoSelectedRef.current = false;
         selectionGenerationRef.current += 1;
         selectionBusyRef.current = false;
+        replaceWatchSearch({ mmsi: null });
         setSelectedMmsiOverride(undefined);
         setSelectionBusy(false);
         const result = await scenarioReset({});
@@ -346,7 +377,7 @@ function WatchPage() {
             applyWatch(next);
             requestChartFocus(null, false);
         }
-    }, [applyWatch, clearIntelligence, requestChartFocus, scenarioReset]);
+    }, [applyWatch, clearIntelligence, replaceWatchSearch, requestChartFocus, scenarioReset]);
 
     const onMockAisToggle = useCallback(
         async (enabled: boolean) => {
@@ -370,6 +401,7 @@ function WatchPage() {
                 if (selectedWasMock) {
                     selectionGenerationRef.current += 1;
                     selectionBusyRef.current = false;
+                    replaceWatchSearch({ mmsi: null });
                     setSelectedMmsiOverride(null);
                     setSelectionBusy(false);
                     requestChartFocus(null, false);
@@ -393,7 +425,15 @@ function WatchPage() {
             setMockEnabledOverride(null);
             setMockToggleBusy(false);
         },
-        [applyWatch, clearIntelligence, liveWatch.selectedMmsi, liveWatch.vessels, mockAisSetEnabled, requestChartFocus],
+        [
+            applyWatch,
+            clearIntelligence,
+            liveWatch.selectedMmsi,
+            liveWatch.vessels,
+            mockAisSetEnabled,
+            replaceWatchSearch,
+            requestChartFocus,
+        ],
     );
 
     const onViewportChange = useCallback((bounds: { southLat: number; westLon: number; northLat: number; eastLon: number }) => {
@@ -415,6 +455,40 @@ function WatchPage() {
             void aisViewportClearRef.current({});
         };
     }, []);
+
+    // URL is source of truth for Case ↔ Queue — sync server selection once on load.
+    useEffect(() => {
+        if (selectionHydratedRef.current) return;
+        selectionHydratedRef.current = true;
+
+        const urlMmsi = search.mmsi ?? null;
+        const serverMmsi = seedWatch.selectedMmsi ?? null;
+        if (urlMmsi === serverMmsi) {
+            if (urlMmsi) {
+                requestChartFocus(urlMmsi, vesselHasOpenIncident(seedWatch, urlMmsi));
+            }
+            return;
+        }
+
+        if (urlMmsi) {
+            void selectVessel(urlMmsi, { focus: true });
+            return;
+        }
+
+        void (async () => {
+            const generation = ++selectionGenerationRef.current;
+            selectionBusyRef.current = true;
+            setSelectedMmsiOverride(null);
+            setSelectionBusy(true);
+            const result = await vesselSelect({ mmsi: null });
+            if (generation !== selectionGenerationRef.current) return;
+            const next = result.data?.session.vesselSelect;
+            if (next) applyWatch(next);
+            selectionBusyRef.current = false;
+            setSelectedMmsiOverride(undefined);
+            setSelectionBusy(false);
+        })();
+    }, [applyWatch, requestChartFocus, search.mmsi, seedWatch, selectVessel, vesselSelect]);
 
     // Mutation only ACKs that Gemini work started; busy stays until SessionUpdateIntelligence.
     const onRequestIntelligence = useCallback(
@@ -459,7 +533,7 @@ function WatchPage() {
                         countedVessels={countedVessels}
                         filters={filters}
                         shipTypeCatalog={shipTypeCatalog}
-                        onFiltersChange={setFilters}
+                        onFiltersChange={onFiltersChange}
                         onReset={onReset}
                         mockEnabled={mockEnabled}
                         mockBusy={mockToggleBusy}
@@ -472,7 +546,6 @@ function WatchPage() {
                             centerLon={centerLon}
                             zoom={zoom}
                             vessels={mapVessels}
-                            highRiskZones={displayWatch.highRiskZones}
                             layers={filters.layers}
                             selectedMmsi={displayWatch.selectedMmsi}
                             focusRequest={focusRequest}

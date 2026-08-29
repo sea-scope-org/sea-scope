@@ -45,8 +45,10 @@ export function SectionTabs({ ariaLabel, children, trailing, className, border =
 /** Active/inactive classes for a section-tab `<Link>`. */
 export function sectionTabClassName(active: boolean) {
     return cn(
-        '-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors',
-        active ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+        '-mb-px flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+        active
+            ? 'border-primary text-foreground'
+            : 'border-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground',
     );
 }
 

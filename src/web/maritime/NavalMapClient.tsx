@@ -29,14 +29,12 @@ setWorkerUrl(maplibreWorkerUrl);
 
 type WatchState = GqlCWatchFieldsFragment;
 type Vessel = WatchState['vessels'][number];
-type HighRiskZone = WatchState['highRiskZones'][number];
 
 export interface NavalMapClientProps {
     centerLat: number;
     centerLon: number;
     zoom: number;
     vessels: ReadonlyArray<Vessel>;
-    highRiskZones: ReadonlyArray<HighRiskZone>;
     layers: WatchLayerFilters;
     selectedMmsi: string | null | undefined;
     focusRequest: NavalMapFocusRequest | null;
@@ -51,7 +49,6 @@ export function NavalMapClient({
     centerLon,
     zoom,
     vessels,
-    highRiskZones,
     layers,
     selectedMmsi,
     focusRequest,
@@ -75,7 +72,6 @@ export function NavalMapClient({
     const [nowMs, setNowMs] = useState(() => Date.now());
     const { catalog, nameById, attribution } = useProtectedInfrastructure();
 
-    const zoneGeoJson = useMemo(() => zonesToGeoJson(highRiskZones), [highRiskZones]);
     const assetGeoJson = useMemo(() => catalog ?? emptyFeatureCollection, [catalog]);
     const infrastructureFilter = useMemo(() => infrastructureLayerFilter(layers), [layers]);
     const showInfrastructure = watchInfrastructureLayersVisible(layers) && Boolean(catalog);
@@ -189,28 +185,6 @@ export function NavalMapClient({
             >
                 <NavigationControl position="bottom-left" showCompass={false} />
 
-                {layers.highRiskZones ? (
-                    <Source id="high-risk-zones" type="geojson" data={zoneGeoJson}>
-                        <Layer
-                            id="high-risk-zones-fill"
-                            type="fill"
-                            paint={{
-                                'fill-color': '#b45309',
-                                'fill-opacity': 0.16,
-                            }}
-                        />
-                        <Layer
-                            id="high-risk-zones-line"
-                            type="line"
-                            paint={{
-                                'line-color': '#9a3412',
-                                'line-width': 1.5,
-                                'line-dasharray': [2, 1],
-                            }}
-                        />
-                    </Source>
-                ) : null}
-
                 {showInfrastructure ? (
                     <Source id="protected-assets" type="geojson" data={assetGeoJson}>
                         <Layer
@@ -218,9 +192,9 @@ export function NavalMapClient({
                             type="line"
                             filter={infrastructureFilter}
                             paint={{
-                                'line-color': ['match', ['get', 'type'], 'pipeline', '#9a3412', 'cable', '#1e179f', '#1e179f'],
-                                'line-width': ['match', ['get', 'type'], 'pipeline', 3, 2.5],
-                                'line-opacity': 0.9,
+                                'line-color': ['match', ['get', 'type'], 'pipeline', '#9a3412', 'cable', '#7a8a98', '#7a8a98'],
+                                'line-width': ['match', ['get', 'type'], 'pipeline', 3, 1.75],
+                                'line-opacity': ['match', ['get', 'type'], 'pipeline', 0.85, 0.45],
                                 'line-dasharray': ['match', ['get', 'type'], 'pipeline', ['literal', [1.5, 1.25]], ['literal', [1, 0]]],
                             }}
                         />
@@ -238,9 +212,10 @@ export function NavalMapClient({
                                 'text-padding': 12,
                             }}
                             paint={{
-                                'text-color': ['match', ['get', 'type'], 'pipeline', '#7c2d12', '#1e179f'],
+                                'text-color': ['match', ['get', 'type'], 'pipeline', '#7c2d12', '#5c6b78'],
                                 'text-halo-color': '#f5f0e8',
                                 'text-halo-width': 1.5,
+                                'text-opacity': ['match', ['get', 'type'], 'pipeline', 0.9, 0.65],
                             }}
                         />
                     </Source>
@@ -357,27 +332,6 @@ function infrastructureLayerFilter(layers: WatchLayerFilters): FilterSpecificati
     return ['any', ...clauses] as FilterSpecification;
 }
 
-function zonesToGeoJson(zones: ReadonlyArray<HighRiskZone>) {
-    return {
-        type: 'FeatureCollection' as const,
-        features: zones.map((zone) => {
-            const ring = zone.ring.map((p) => [p.lon, p.lat] as [number, number]);
-            const first = ring[0];
-            if (first && (ring.length === 0 || ring[ring.length - 1]![0] !== first[0] || ring[ring.length - 1]![1] !== first[1])) {
-                ring.push(first);
-            }
-            return {
-                type: 'Feature' as const,
-                properties: { zoneId: zone.zoneId, name: zone.name },
-                geometry: {
-                    type: 'Polygon' as const,
-                    coordinates: [ring],
-                },
-            };
-        }),
-    };
-}
-
 function tracksToGeoJson(vessels: ReadonlyArray<Vessel>, activeMmsi: string | null) {
     return {
         type: 'FeatureCollection' as const,
@@ -425,7 +379,9 @@ function projectionsToGeoJson(vessels: ReadonlyArray<Vessel>, activeMmsi: string
 function MapLegend({ attribution }: { attribution: string | null }) {
     return (
         <details className="absolute top-3 left-3 max-w-64 rounded-md border border-border bg-background/95 text-[10px] text-foreground shadow-sm">
-            <summary className="cursor-pointer px-3 py-2 font-semibold tracking-wide uppercase">Map legend</summary>
+            <summary className="cursor-pointer px-3 py-2 font-semibold tracking-wide uppercase transition-colors hover:bg-muted/40 hover:text-foreground">
+                Map legend
+            </summary>
             <div className="space-y-2 border-t border-border px-3 py-2 text-muted-foreground">
                 <p>
                     <strong className="text-foreground">Vessel color</strong> = type: Cargo blue · Tanker burgundy · Passenger purple ·
@@ -437,7 +393,7 @@ function MapLegend({ attribution }: { attribution: string | null }) {
                 </p>
                 <p>Orientation = heading · faded = stale · dashed ring = AIS dark · double outline = selected.</p>
                 <p>
-                    <span className="font-semibold text-foreground">Solid navy</span> = submarine cable ·{' '}
+                    <span className="font-semibold text-foreground">Solid slate</span> = submarine cable ·{' '}
                     <span className="font-semibold text-foreground">dashed bronze</span> = pipeline.
                 </p>
                 <p>

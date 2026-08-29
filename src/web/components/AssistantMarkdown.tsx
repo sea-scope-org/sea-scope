@@ -118,7 +118,7 @@ function MarkdownAnchor({
         <>
             <button
                 type="button"
-                className={cn(linkClassName, 'appearance-none bg-transparent p-0 text-left')}
+                className={cn(linkClassName, 'cursor-pointer appearance-none bg-transparent p-0 text-left hover:opacity-90')}
                 data-streamdown="link"
                 onClick={() => setConfirmOpen(true)}
             >

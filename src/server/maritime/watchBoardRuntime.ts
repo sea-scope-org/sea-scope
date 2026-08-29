@@ -2,7 +2,7 @@ import { environmentVariables } from '../env/environmentVariablesCreate';
 import { aisStreamIngestIsStarted, aisStreamIngestStatus, aisStreamIngestStatusDetail } from './aisStreamIngest';
 import { scenarioOffsetToBbox } from './aisTheater';
 import { protectedInfrastructureAssets } from './infrastructure/protectedInfrastructureCatalog';
-import { aisGapDetect, kinematicsDetect, pointInPolygon } from './kinematicsDetect';
+import { aisGapDetect, kinematicsDetect } from './kinematicsDetect';
 import { RISK_BASELINE, riskCompute, riskLevelFromScore, stickyKindsFromAnomalies } from './riskEngine';
 import { DEFAULT_SCENARIO_ID, scenarioDefinitionGet } from './scenarioRuntime';
 import type { ScenarioPlayerState, ScenarioVesselState } from './scenarioRuntime';
@@ -78,7 +78,6 @@ export function watchBoardOverlayScenario(): ScenarioDefinition {
             centerLat: center.lat,
             centerLon: center.lon,
             zoom: 9,
-            highRiskZones: [],
             protectedAssets,
             simulatedObservations: [],
             osintAlerts: [],
@@ -93,7 +92,7 @@ export function watchBoardOverlayScenario(): ScenarioDefinition {
         protectedAssets,
         title: 'SeaScope watch — live + demo',
         description:
-            'Fused watch board: Galaxy Leader mock incident tracks (shifted into the live AIS bounding box) stream alongside AISStream positions. Real undersea cables and pipelines (TeleGeography + EMODnet), zones, and OSINT overlay the theater.',
+            'Fused watch board: Galaxy Leader mock incident tracks (shifted into the live AIS bounding box) stream alongside AISStream positions. Real undersea cables and pipelines (TeleGeography + EMODnet) and OSINT overlay the theater.',
     };
 }
 
@@ -172,21 +171,24 @@ export function watchBoardDataSources(): WatchDataSourceStatus[] {
 export function watchBoardTick(scenario: ScenarioDefinition): boolean {
     const state = boardEnsure();
     const wallMs = Date.now();
-    const simMs = mockScenarioSourceIsStarted() ? mockScenarioSourceSimMs() : wallMs - state.startedAtMs;
+    const demoOn = mockScenarioSourceIsStarted();
+    const simMs = demoOn ? mockScenarioSourceSimMs() : wallMs - state.startedAtMs;
     const trackedVessels = vesselTrackStoreList();
     const newAnomalies: Anomaly[] = [];
 
     const vessels: ScenarioVesselState[] = trackedVessels.map((tracked) => {
         const vessel = vesselFromTrack(tracked, wallMs);
+        // While Demo is on, live AIS stays map clutter — only mock contacts raise
+        // attention flags (four curated narrative ships). Sticky live anomalies from
+        // before Demo would otherwise flood Needs attention.
+        const raiseAttention = !demoOn || tracked.source === 'mock';
         const prev = tracked.previousPosition;
         const curr = tracked.position;
-        const inHighRiskZone = scenario.highRiskZones.some((z) => pointInPolygon({ lat: curr.lat, lon: curr.lon }, z.ring));
 
-        if (prev && prev.timestamp !== curr.timestamp) {
+        if (raiseAttention && prev && prev.timestamp !== curr.timestamp) {
             const detected = kinematicsDetect(prev, curr, {
                 simMs,
                 recentHeadings: [...tracked.headingHistory],
-                inHighRiskZone,
             });
             for (const anomaly of detected) {
                 const key = `${anomaly.mmsi}:${anomaly.kind}`;
@@ -197,7 +199,7 @@ export function watchBoardTick(scenario: ScenarioDefinition): boolean {
             }
         }
 
-        if (vessel.aisDark) {
+        if (raiseAttention && vessel.aisDark) {
             const dark = aisGapDetect(curr, wallMs, AIS_DARK_GAP_MS, Date.parse(curr.timestamp));
             if (dark) {
                 const key = `${dark.mmsi}:${dark.kind}`;
@@ -222,15 +224,31 @@ export function watchBoardTick(scenario: ScenarioDefinition): boolean {
 
     for (const vessel of vessels) {
         const previousScore = state.scoreByMmsi.get(vessel.mmsi) ?? RISK_BASELINE;
+        const raiseAttention = !demoOn || vessel.dataSource === 'mock';
+
+        if (!raiseAttention) {
+            if (previousScore !== RISK_BASELINE) state.dirty = true;
+            state.scoreByMmsi.set(vessel.mmsi, RISK_BASELINE);
+            scored.push({
+                ...vessel,
+                riskScore: RISK_BASELINE,
+                riskLevel: 'green',
+                riskTrend: 'stable',
+                activeFactors: [],
+                nearestAssetId: null,
+                nearestAssetDistanceNm: null,
+                radarPosition: null,
+            });
+            continue;
+        }
+
         const position = vessel.position ? { lat: vessel.position.lat, lon: vessel.position.lon } : null;
-        const inHighRiskZone = position ? scenario.highRiskZones.some((z) => pointInPolygon(position, z.ring)) : false;
         const computed = riskCompute({
             mmsi: vessel.mmsi,
             simMs,
             position,
             sogKn: vessel.position?.sog ?? null,
             aisDark: vessel.aisDark,
-            inHighRiskZone,
             stickyKinds: stickyKindsFromAnomalies(state.anomalies, vessel.mmsi),
             protectedAssets: scenario.protectedAssets,
             simulatedObservations: scenario.simulatedObservations,

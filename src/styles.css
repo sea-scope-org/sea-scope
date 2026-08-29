@@ -135,6 +135,16 @@
     body {
         @apply bg-background text-foreground font-sans;
     }
+    /*
+     * Tailwind v4 preflight no longer sets cursor:pointer on buttons. Restore
+     * it for native buttons and role=button controls so every clickable control
+     * shows a pointer. Disabled controls keep the default cursor; opt out with
+     * `cursor-default` / `cursor-not-allowed` when needed (e.g. live thinking).
+     */
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']):not([data-disabled]) {
+        cursor: pointer;
+    }
 }
 
 /* Nested scroll containers (chat transcripts, inner panes) reserve the classic-

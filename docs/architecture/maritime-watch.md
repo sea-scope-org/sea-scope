@@ -21,14 +21,18 @@ Shared across sources:
 - `vesselTrackStore` — latest identity/position/track tail tagged by source; live wins on MMSI collision for 5 minutes.
 - Pure kinematic detectors (`kinematicsDetect`) that emit sticky `Anomaly` records.
 - A **rule-based risk engine** (`riskEngine`) over the fused vessel set. Nearest cable/pipeline is **context only** (shown on Case /
-  preview) — proximity does not raise score; the ocean is dense with infrastructure.
+  preview) — proximity does not raise score; the ocean is dense with infrastructure. **While Demo is on**, only `mock` contacts raise
+  attention scores — live AIS stays Green map clutter so Needs attention shows the four curated narrative ships. `aisDark` scores only while
+  the gap is current (not sticky forever).
 - **Real protected infrastructure** (`protectedInfrastructureCatalog`) — public TeleGeography submarine cables + EMODnet pipelines at true
   WGS84. Refresh with `npm run infrastructure:import`. Chart loads geometries from `/maritime/protected-infrastructure.geojson` (not watch
   SSE). Never passed through `scenarioOffsetToBbox`. Always on the board. Keep TeleGeography attribution; revisit commercial licensing
   before productizing redistribution of their geocoded routes.
-- Galaxy Leader demo overlays (zones, OSINT, simulated radar/EO) **only while Demo is on**. Mock vessel positions and those overlays are
-  mapped from Red Sea authoring coords into a **water corridor** inside `AISSTREAM_BBOX` (`aisTheaterMapPoint` / `scenarioOffsetToBbox`) so
-  the ~1° Bab el-Mandeb theater fits the narrow Gibraltar channel instead of spilling onto Andalusia/Morocco.
+- Galaxy Leader demo overlays (OSINT, simulated radar/EO) **only while Demo is on**. The mock feeder ships **four** attention-raising
+  contacts (Galaxy Leader Red narrative, decoy impossible jump, speed-drop Yellow, zigzag + speed-drop Yellow); live AIS fills the rest of
+  the map. Mock vessel positions and those overlays are mapped from Red Sea authoring coords into a **water corridor** inside
+  `AISSTREAM_BBOX` (`aisTheaterMapPoint` / `scenarioOffsetToBbox`) so the ~1° Bab el-Mandeb theater fits the narrow Gibraltar channel
+  instead of spilling onto Andalusia/Morocco.
 - The LLM Copilot (`vesselIntelligenceRun`) **explains** structured risk evidence only.
 - The chart keeps vessel identity and attention independent: normalized ship family controls marker color (tanker burgundy, not risk-red),
   while the existing risk bands control external fixed screen-space halos and AIS dark uses a separate dashed ring. Observed track tails

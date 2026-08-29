@@ -13,14 +13,12 @@ const NavalMapClient = lazy(async () => {
 
 type WatchState = GqlCWatchFieldsFragment;
 type Vessel = WatchState['vessels'][number];
-type HighRiskZone = WatchState['highRiskZones'][number];
 
 export interface NavalMapProps {
     centerLat: number;
     centerLon: number;
     zoom: number;
     vessels: ReadonlyArray<Vessel>;
-    highRiskZones: ReadonlyArray<HighRiskZone>;
     layers: WatchLayerFilters;
     selectedMmsi: string | null | undefined;
     focusRequest: NavalMapFocusRequest | null;
@@ -52,7 +50,10 @@ export function NavalMap(props: NavalMapProps) {
 function MapPlaceholder({ className }: { className?: string }) {
     return (
         <div
-            className={cn('grid size-full place-items-center gap-2 bg-muted text-xs tracking-wide text-muted-foreground', className)}
+            className={cn(
+                'flex size-full flex-col items-center justify-center gap-2 bg-muted text-xs tracking-wide text-muted-foreground',
+                className,
+            )}
             role="status"
             aria-label="Loading chart"
         >

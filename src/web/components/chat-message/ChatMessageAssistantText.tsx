@@ -58,7 +58,7 @@ export function ChatMessageAssistantTextView({
                                                 href={source.url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-flex max-w-48 items-center gap-1.5 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                                                className="inline-flex max-w-48 cursor-pointer items-center gap-1.5 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
                                             >
                                                 <SourceFavicon url={source.url} title={source.title} />
                                                 <span className="truncate">{source.title}</span>

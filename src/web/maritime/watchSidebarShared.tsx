@@ -41,7 +41,7 @@ export function RiskBadge({ level, score, trend }: { level: RiskLevel; score: nu
     );
 }
 
-export function TrendIcon({ trend }: { trend: Vessel['riskTrend'] }) {
+function TrendIcon({ trend }: { trend: Vessel['riskTrend'] }) {
     if (trend === 'rising') return <ArrowUpIcon className="size-3 shrink-0" aria-label="Rising" />;
     if (trend === 'falling') return <ArrowDownIcon className="size-3 shrink-0" aria-label="Falling" />;
     return <ArrowRightIcon className="size-3 shrink-0 opacity-70" aria-label="Stable" />;

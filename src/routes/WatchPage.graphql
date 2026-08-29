@@ -97,14 +97,6 @@ fragment WatchFields on WatchState {
         body
         region
     }
-    highRiskZones {
-        zoneId
-        name
-        ring {
-            lat
-            lon
-        }
-    }
 }
 
 query WatchPage {

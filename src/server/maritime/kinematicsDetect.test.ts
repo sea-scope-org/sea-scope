@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { aisGapDetect, haversineNm, kinematicsDetect, pointInPolygon } from './kinematicsDetect';
+import { aisGapDetect, haversineNm, kinematicsDetect } from './kinematicsDetect';
 import type { AisPosition } from './types';
 
 function ais(partial: Partial<AisPosition> & Pick<AisPosition, 'lat' | 'lon' | 'sog' | 'cog' | 'heading' | 'timestamp'>): AisPosition {
@@ -19,24 +19,6 @@ describe('haversineNm', () => {
         const nm = haversineNm({ lat: 14, lon: 42 }, { lat: 15, lon: 42 });
         expect(nm).toBeGreaterThan(59);
         expect(nm).toBeLessThan(61);
-    });
-});
-
-describe('pointInPolygon', () => {
-    const square = [
-        { lat: 14, lon: 42 },
-        { lat: 14, lon: 43 },
-        { lat: 15, lon: 43 },
-        { lat: 15, lon: 42 },
-        { lat: 14, lon: 42 },
-    ];
-
-    it('detects points inside the ring', () => {
-        expect(pointInPolygon({ lat: 14.5, lon: 42.5 }, square)).toBe(true);
-    });
-
-    it('detects points outside the ring', () => {
-        expect(pointInPolygon({ lat: 13.5, lon: 42.5 }, square)).toBe(false);
     });
 });
 
@@ -78,34 +60,6 @@ describe('kinematicsDetect', () => {
             recentHeadings: [0, 45, 90, 140],
         });
         expect(anomalies.some((a) => a.kind === 'headingZigZag')).toBe(true);
-    });
-
-    it('detects loitering when low SOG inside a high-risk zone', () => {
-        const curr = ais({
-            lat: 14.5,
-            lon: 42.5,
-            sog: 0.5,
-            cog: 10,
-            heading: 10,
-            timestamp: '2023-11-19T12:10:00.000Z',
-        });
-
-        const anomalies = kinematicsDetect(null, curr, { simMs: 600_000, inHighRiskZone: true });
-        expect(anomalies.some((a) => a.kind === 'loitering')).toBe(true);
-    });
-
-    it('does not flag loitering outside a high-risk zone', () => {
-        const curr = ais({
-            lat: 14.5,
-            lon: 42.5,
-            sog: 0.5,
-            cog: 10,
-            heading: 10,
-            timestamp: '2023-11-19T12:10:00.000Z',
-        });
-
-        const anomalies = kinematicsDetect(null, curr, { simMs: 600_000, inHighRiskZone: false });
-        expect(anomalies.some((a) => a.kind === 'loitering')).toBe(false);
     });
 
     it('detects impossibleJump when implied speed exceeds 60 kn', () => {

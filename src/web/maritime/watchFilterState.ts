@@ -1,3 +1,5 @@
+const WATCH_LAYER_KEYS = ['cables', 'pipelinesOilGas', 'pipelinesOther', 'trackTails', 'radarContacts'] as const;
+
 export interface WatchLayerFilters {
     /** TeleGeography submarine telecom cables. */
     cables: boolean;
@@ -5,7 +7,6 @@ export interface WatchLayerFilters {
     pipelinesOilGas: boolean;
     /** EMODnet water, sewage, and other non-hydrocarbon pipelines. */
     pipelinesOther: boolean;
-    highRiskZones: boolean;
     trackTails: boolean;
     radarContacts: boolean;
 }
@@ -16,14 +17,81 @@ export interface WatchFiltersState {
     shipTypes: ReadonlySet<string>;
 }
 
+/** Canonical `/watch` search — absent keys mean defaults (all layers/types on, Queue). */
+export interface WatchSearch {
+    /** Case vessel MMSI; omit for Queue. */
+    mmsi?: string;
+    /** Comma-separated layer keys that are off. */
+    layersOff?: string;
+    /** Comma-separated ship types that are unchecked. */
+    shipTypesOff?: string;
+}
+
 const DEFAULT_LAYER_FILTERS: WatchLayerFilters = {
     cables: true,
     pipelinesOilGas: true,
     pipelinesOther: true,
-    highRiskZones: true,
     trackTails: true,
     radarContacts: true,
 };
+
+const WATCH_LAYER_KEY_SET = new Set<string>(WATCH_LAYER_KEYS);
+
+function watchCommaListParse(value: unknown): string[] {
+    if (typeof value !== 'string' || value.length === 0) return [];
+    return value
+        .split(',')
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0);
+}
+
+function watchCommaListJoin(values: ReadonlyArray<string>): string | undefined {
+    return values.length > 0 ? values.join(',') : undefined;
+}
+
+/** TanStack `validateSearch` — drop empty / unknown junk; keep shareable defaults omitted. */
+export function watchSearchValidate(search: Record<string, unknown>): WatchSearch {
+    const result: WatchSearch = {};
+    if (typeof search.mmsi === 'string' && search.mmsi.trim().length > 0) {
+        result.mmsi = search.mmsi.trim();
+    }
+    const layersOff = watchCommaListParse(search.layersOff).filter((key) => WATCH_LAYER_KEY_SET.has(key));
+    const layersOffJoined = watchCommaListJoin(layersOff);
+    if (layersOffJoined) result.layersOff = layersOffJoined;
+    const shipTypesOffJoined = watchCommaListJoin(watchCommaListParse(search.shipTypesOff));
+    if (shipTypesOffJoined) result.shipTypesOff = shipTypesOffJoined;
+    return result;
+}
+
+export function watchFiltersFromSearch(search: WatchSearch, catalog: ReadonlyArray<string>): WatchFiltersState {
+    const layersOff = new Set(watchCommaListParse(search.layersOff));
+    const shipTypesOff = new Set(watchCommaListParse(search.shipTypesOff));
+    const layers = { ...DEFAULT_LAYER_FILTERS };
+    for (const key of WATCH_LAYER_KEYS) {
+        if (layersOff.has(key)) layers[key] = false;
+    }
+    return {
+        layers,
+        shipTypes: new Set(catalog.filter((type) => !shipTypesOff.has(type))),
+    };
+}
+
+/** Build the next search object from filters + selection (defaults omitted). */
+export function watchSearchFromState(args: {
+    mmsi?: string | null;
+    filters: WatchFiltersState;
+    catalog: ReadonlyArray<string>;
+}): WatchSearch {
+    const layersOff = WATCH_LAYER_KEYS.filter((key) => !args.filters.layers[key]);
+    const shipTypesOff = args.catalog.filter((type) => !args.filters.shipTypes.has(type));
+    const result: WatchSearch = {};
+    if (args.mmsi) result.mmsi = args.mmsi;
+    const layersOffJoined = watchCommaListJoin(layersOff);
+    if (layersOffJoined) result.layersOff = layersOffJoined;
+    const shipTypesOffJoined = watchCommaListJoin(shipTypesOff);
+    if (shipTypesOffJoined) result.shipTypesOff = shipTypesOffJoined;
+    return result;
+}
 
 export function watchShipTypesFromVessels(vessels: ReadonlyArray<{ shipType: string }>): string[] {
     return [...new Set(vessels.map((v) => v.shipType))].sort((a, b) => a.localeCompare(b));
@@ -80,7 +148,6 @@ export function watchFiltersOffCount(filters: WatchFiltersState, catalog: Readon
     if (!layers.cables) off += 1;
     if (!layers.pipelinesOilGas) off += 1;
     if (!layers.pipelinesOther) off += 1;
-    if (!layers.highRiskZones) off += 1;
     if (!layers.trackTails) off += 1;
     if (!layers.radarContacts) off += 1;
     for (const type of catalog) {

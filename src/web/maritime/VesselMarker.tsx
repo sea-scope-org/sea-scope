@@ -11,6 +11,28 @@ const HALO_CLASS: Record<WatchVessel['riskLevel'], string | null> = {
     red: 'size-11 border-2 border-red-500 bg-red-500/10 shadow-[0_0_16px_rgba(239,68,68,0.75)]',
 };
 
+/** Chart cream outline — matches Positron tint halo so glyphs stay sharp on water. */
+const GLYPH_OUTLINE = '#f5f0e8';
+const GLYPH_PATH = 'M7 1 L13 16.75 L7 13.25 L1 16.75 Z';
+
+/** SVG chevron (not a CSS border-triangle) keeps heading edges crisp on the chart. */
+function VesselGlyph({ color, className }: { color: string; className?: string }) {
+    return (
+        <svg className={cn('block overflow-visible', className)} width={14} height={18} viewBox="0 0 14 18" aria-hidden>
+            <path d={GLYPH_PATH} fill="none" stroke="#0f172a" strokeWidth={2.6} strokeLinejoin="miter" strokeMiterlimit={3} />
+            <path
+                d={GLYPH_PATH}
+                fill={color}
+                stroke={GLYPH_OUTLINE}
+                strokeWidth={1.4}
+                strokeLinejoin="miter"
+                strokeMiterlimit={3}
+                paintOrder="stroke fill"
+            />
+        </svg>
+    );
+}
+
 export function VesselMarker({
     vessel,
     nowMs,
@@ -64,11 +86,12 @@ export function VesselMarker({
                             aria-hidden
                         />
                     ) : null}
-                    <span className="relative z-10" style={{ opacity, transform: `rotate(${position.heading}deg)` }} aria-hidden>
-                        <span
-                            className="block size-0 border-x-[6px] border-b-15 border-x-transparent drop-shadow-[0_1px_1px_rgba(15,23,42,0.8)]"
-                            style={{ borderBottomColor: vesselTypeColor(vessel.shipType) }}
-                        />
+                    <span
+                        className="relative z-10 will-change-transform"
+                        style={{ opacity, transform: `rotate(${position.heading}deg)` }}
+                        aria-hidden
+                    >
+                        <VesselGlyph color={vesselTypeColor(vessel.shipType)} />
                     </span>
                 </button>
             </HoverCardTrigger>

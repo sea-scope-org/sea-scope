@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { vesselTrackStoreList, vesselTrackStoreUpsertPosition } from './vesselTrackStore';
+import {
+    vesselTrackStoreList,
+    vesselTrackStoreRemoveBySource,
+    vesselTrackStoreRemoveMockExcept,
+    vesselTrackStoreUpsertPosition,
+} from './vesselTrackStore';
 
 const identity = {
     mmsi: '538090574',
@@ -50,5 +55,19 @@ describe('vesselTrackStore', () => {
         const listed = vesselTrackStoreList().find((v) => v.identity.mmsi === mmsi);
         expect(listed?.source).toBe('aisstream');
         expect(listed?.position.lat).toBe(15);
+    });
+
+    it('removes mock vessels outside the allowed MMSI set', () => {
+        vesselTrackStoreRemoveBySource('mock');
+        const keep = '111000010';
+        const drop = '111000011';
+        vesselTrackStoreUpsertPosition('mock', { ...identity, mmsi: keep }, position({ lat: 14.1 }));
+        vesselTrackStoreUpsertPosition('mock', { ...identity, mmsi: drop }, position({ lat: 14.2 }));
+        vesselTrackStoreUpsertPosition('aisstream', { ...identity, mmsi: '111000012' }, position({ lat: 14.3 }));
+        expect(vesselTrackStoreRemoveMockExcept(new Set([keep]))).toBe(1);
+        const listed = vesselTrackStoreList().map((v) => v.identity.mmsi);
+        expect(listed).toContain(keep);
+        expect(listed).toContain('111000012');
+        expect(listed).not.toContain(drop);
     });
 });

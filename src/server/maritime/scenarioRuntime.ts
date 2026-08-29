@@ -1,4 +1,4 @@
-import { aisGapDetect, kinematicsDetect, pointInPolygon } from './kinematicsDetect';
+import { aisGapDetect, kinematicsDetect } from './kinematicsDetect';
 import { RISK_BASELINE, riskCompute, riskLevelFromScore, stickyKindsFromAnomalies } from './riskEngine';
 import { SCENARIO_CATALOG } from './scenarios/galaxyLeader';
 import type {
@@ -276,7 +276,6 @@ function applyRiskToVessels(
     const vessels: ScenarioVesselState[] = [];
     for (const vessel of state.vessels) {
         const position = vessel.position ? { lat: vessel.position.lat, lon: vessel.position.lon } : null;
-        const inHighRiskZone = position ? scenario.highRiskZones.some((z) => pointInPolygon(position, z.ring)) : false;
         const previousScore = scoreByMmsi.get(vessel.mmsi) ?? RISK_BASELINE;
         const computed = riskCompute({
             mmsi: vessel.mmsi,
@@ -284,7 +283,6 @@ function applyRiskToVessels(
             position,
             sogKn: vessel.position?.sog ?? null,
             aisDark: vessel.aisDark,
-            inHighRiskZone,
             stickyKinds: stickyKindsFromAnomalies(state.anomalies, vessel.mmsi),
             protectedAssets: scenario.protectedAssets,
             simulatedObservations: scenario.simulatedObservations,
@@ -373,11 +371,9 @@ export function scenarioPlayerTick(sessionId: string): ScenarioPlayerState | nul
             while (history.length > HEADING_HISTORY_LEN) history.shift();
             headingHistoryByMmsi.set(vessel.mmsi, history);
 
-            const inHighRiskZone = scenario.highRiskZones.some((z) => pointInPolygon({ lat: live.lat, lon: live.lon }, z.ring));
             const detected = kinematicsDetect(prev, live, {
                 simMs: nextSimMs,
                 recentHeadings: [...history],
-                inHighRiskZone,
             });
             for (const a of detected) {
                 const key = anomalyDedupeKey(a.mmsi, a.kind);

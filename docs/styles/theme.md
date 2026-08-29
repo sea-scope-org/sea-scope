@@ -25,7 +25,10 @@ Foregrounds on primary use `--primary-foreground` (`#f4f3ec`); accent and second
 
 ## Implementation
 
-- `src/styles.css` — brand CSS variables + `@theme inline` color bridge; `html { color-scheme: light }`
+- `src/styles.css` — brand CSS variables + `@theme inline` color bridge; `html { color-scheme: light }`; base layer restores
+  `cursor: pointer` on enabled `button` / `[role=button]` (Tailwind v4 preflight dropped it)
+- Clickable controls and card-like rows should keep an explicit hover state (`hover:bg-*`, `hover:text-*`, or equivalent) in addition to the
+  pointer cursor so affordance is visible on pointer devices
 - `src/routes/__root.tsx` — `theme-color` meta `#f4f3ec`; no theme-init script
 - `public/manifest.json` — `theme_color` / `background_color` `#f4f3ec`
 - Toasts force `theme="light"` in `src/web/components/base/sonner.tsx`

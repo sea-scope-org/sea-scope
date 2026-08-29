@@ -524,7 +524,7 @@ function MultiSelectControl({
                                 onChange(options.filter((o) => next.has(o)));
                             }}
                             className={cn(
-                                'inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-xs wrap-break-word transition-colors',
+                                'inline-flex max-w-full cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-xs wrap-break-word transition-colors',
                                 'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
                                 isSelected
                                     ? 'border-primary bg-primary text-primary-foreground'

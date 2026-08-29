@@ -36,8 +36,8 @@ Traditional VTS answers “what is happening?” Global intel answers “what do
 
 1. Land on SeaScope home; open the watch console.
 2. Live AISStream traffic fills the map when a key is configured. Real undersea cables and pipelines (TeleGeography + EMODnet) overlay at
-   true WGS84. Optionally enable the **Galaxy Leader** demo stream from the toolbar (**Demo**) for dense curated AIS, kinematic anomalies,
-   simulated radar mismatch, then AIS dark.
+   true WGS84. Optionally enable the **Galaxy Leader** demo stream from the toolbar (**Demo**) for four curated contacts that raise
+   attention flags, kinematic anomalies, simulated radar mismatch, then AIS dark.
 3. Vessels carry a live **0–100 risk score** (Green 0–29 / Yellow 30–59 / Orange 60–79 / Red 80–100). The sidebar **Needs attention** queue
    ranks Yellow+.
 4. On Red, SeaScope opens an incident timeline and requests operator acknowledgement.

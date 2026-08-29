@@ -142,11 +142,11 @@ export async function mockAisSetEnabled(
 
         mockScenarioSourceSetEnabled(serverRuntime, args.enabled);
 
-        if (!args.enabled) {
-            watchBoardClearStickyState();
-            if (selectedWasMock) {
-                watchBoardSessionSelectVessel(parent.sessionId, null);
-            }
+        // Clear sticky risk when Demo flips either way so live AIS-dark noise from
+        // before Demo cannot flood Needs attention, and demo scores do not linger after.
+        watchBoardClearStickyState();
+        if (!args.enabled && selectedWasMock) {
+            watchBoardSessionSelectVessel(parent.sessionId, null);
         }
 
         // Build the response first so the toggle mutation is not blocked on

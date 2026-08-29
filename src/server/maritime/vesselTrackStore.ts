@@ -110,3 +110,15 @@ export function vesselTrackStoreRemoveBySource(source: VesselDataSourceId): numb
     }
     return removed;
 }
+
+/** Drop mock contacts whose MMSI is no longer in the active scenario (HMR / scenario trim). */
+export function vesselTrackStoreRemoveMockExcept(allowedMmsi: ReadonlySet<string>): number {
+    let removed = 0;
+    for (const [mmsi, vessel] of vesselsByMmsi) {
+        if (vessel.source !== 'mock') continue;
+        if (allowedMmsi.has(mmsi)) continue;
+        vesselsByMmsi.delete(mmsi);
+        removed += 1;
+    }
+    return removed;
+}

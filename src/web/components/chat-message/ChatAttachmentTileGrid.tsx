@@ -59,7 +59,7 @@ export function ChatAttachmentTileGrid({
                     type="button"
                     aria-label={`Show ${overflowCount} more attachment${overflowCount === 1 ? '' : 's'}`}
                     onClick={() => onTileClick(VISIBLE_LIMIT - 1)}
-                    className="flex aspect-square items-center justify-center rounded-md border border-primary-foreground/20 bg-background text-foreground hover:bg-accent"
+                    className="flex aspect-square cursor-pointer items-center justify-center rounded-md border border-primary-foreground/20 bg-background text-foreground transition-colors hover:bg-accent"
                 >
                     <span className="text-base font-semibold">+{overflowCount}</span>
                 </button>
@@ -76,7 +76,7 @@ function AttachmentTileButton({ attachment, onClick }: { attachment: GqlCFileUpl
             onClick={onClick}
             title={attachment.filename}
             aria-label={`Open ${attachment.filename}`}
-            className="group relative aspect-square overflow-hidden rounded-md border border-primary-foreground/20 bg-background hover:bg-accent"
+            className="group relative aspect-square cursor-pointer overflow-hidden rounded-md border border-primary-foreground/20 bg-background transition-colors hover:bg-accent"
         >
             {isImage ? (
                 <img src={attachment.url} alt={attachment.filename} className="size-full object-cover" />

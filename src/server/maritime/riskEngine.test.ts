@@ -27,7 +27,7 @@ describe('riskScoreFromFactors', () => {
         const factors: RiskFactor[] = [
             { rule: 'speedDrop', scoreDelta: 18, explanation: 'x', source: 't' },
             { rule: 'aisDark', scoreDelta: 25, explanation: 'x', source: 't' },
-            { rule: 'loitering', scoreDelta: 22, explanation: 'x', source: 't' },
+            { rule: 'headingZigZag', scoreDelta: 12, explanation: 'x', source: 't' },
             { rule: 'aisRadarMismatch', scoreDelta: 20, explanation: 'x', source: 't' },
             { rule: 'impossibleJump', scoreDelta: 30, explanation: 'x', source: 't' },
         ];
@@ -80,7 +80,6 @@ describe('riskCompute', () => {
             position: { lat: 14.0, lon: 42.0 },
             sogKn: 12,
             aisDark: false,
-            inHighRiskZone: false,
             stickyKinds: new Set(),
             protectedAssets: [cable],
             simulatedObservations: [],
@@ -98,7 +97,6 @@ describe('riskCompute', () => {
             position: { lat: 14.0, lon: 42.0 },
             sogKn: 5,
             aisDark: false,
-            inHighRiskZone: false,
             stickyKinds: new Set(['speedDrop']),
             protectedAssets: [cable],
             simulatedObservations: [],
@@ -119,8 +117,7 @@ describe('riskCompute', () => {
             position: { lat: 14.4, lon: 42.4 },
             sogKn: 0.2,
             aisDark: true,
-            inHighRiskZone: true,
-            stickyKinds: new Set(['speedDrop', 'headingZigZag', 'loitering', 'aisDark']),
+            stickyKinds: new Set(['speedDrop', 'headingZigZag', 'aisDark']),
             protectedAssets: [cable],
             simulatedObservations: [
                 {
@@ -142,6 +139,23 @@ describe('riskCompute', () => {
         expect(result.radarPosition).toEqual({ lat: 14.45, lon: 42.48 });
     });
 
+    it('does not keep aisDark score after the vessel transmits again', () => {
+        const result = riskCompute({
+            mmsi: '1',
+            simMs: 0,
+            position: { lat: 14.0, lon: 42.0 },
+            sogKn: 12,
+            aisDark: false,
+            stickyKinds: new Set(['aisDark']),
+            protectedAssets: [],
+            simulatedObservations: [],
+            previousScore: RISK_BASELINE + 25,
+        });
+        expect(result.activeFactors.some((f) => f.rule === 'aisDark')).toBe(false);
+        expect(result.riskScore).toBe(RISK_BASELINE);
+        expect(result.riskLevel).toBe('green');
+    });
+
     it('does not raise risk for proximity to cables or pipelines alone', () => {
         const result = riskCompute({
             mmsi: '1',
@@ -149,8 +163,7 @@ describe('riskCompute', () => {
             position: { lat: 14.4, lon: 42.4 },
             sogKn: 0.5,
             aisDark: false,
-            inHighRiskZone: false,
-            stickyKinds: new Set(['loitering']),
+            stickyKinds: new Set(),
             protectedAssets: [cable],
             simulatedObservations: [],
             previousScore: RISK_BASELINE,
@@ -158,7 +171,6 @@ describe('riskCompute', () => {
         expect(result.nearestAssetId).toBe('cable-c17');
         expect(result.nearestAssetDistanceNm).toBeLessThan(cable.riskRadiusNm);
         expect(result.activeFactors.some((f) => f.rule === 'nearProtectedAsset')).toBe(false);
-        expect(result.activeFactors.some((f) => f.rule === 'loitering')).toBe(true);
-        expect(result.riskScore).toBe(RISK_BASELINE + 22);
+        expect(result.riskScore).toBe(RISK_BASELINE);
     });
 });

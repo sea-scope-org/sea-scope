@@ -41,7 +41,7 @@ export interface GqlCAnomaly {
     title: Scalars['String']['output'];
 }
 
-export type GqlCAnomalyKind = 'aisDark' | 'headingZigZag' | 'impossibleJump' | 'loitering' | 'speedDrop';
+export type GqlCAnomalyKind = 'aisDark' | 'headingZigZag' | 'impossibleJump' | 'speedDrop';
 
 export type GqlCAnomalySeverity = 'critical' | 'high' | 'low' | 'medium';
 
@@ -365,13 +365,6 @@ export interface GqlCFileUpload {
     url: Scalars['String']['output'];
 }
 
-export interface GqlCHighRiskZone {
-    __typename?: 'HighRiskZone';
-    name: Scalars['String']['output'];
-    ring: Array<GqlCLatLon>;
-    zoneId: Scalars['ID']['output'];
-}
-
 export interface GqlCIncident {
     __typename?: 'Incident';
     closedAtSimMs?: Maybe<Scalars['Float']['output']>;
@@ -470,15 +463,7 @@ export interface GqlCRiskFactor {
 export type GqlCRiskLevel = 'green' | 'orange' | 'red' | 'yellow';
 
 export type GqlCRiskRule =
-    | 'aisDark'
-    | 'aisRadarMismatch'
-    | 'baseline'
-    | 'headingZigZag'
-    | 'impossibleJump'
-    | 'loitering'
-    | 'nearProtectedAsset'
-    | 'speedDrop'
-    | 'zoneEntry';
+    'aisDark' | 'aisRadarMismatch' | 'baseline' | 'headingZigZag' | 'impossibleJump' | 'nearProtectedAsset' | 'speedDrop';
 
 export type GqlCRiskTrend = 'falling' | 'rising' | 'stable';
 
@@ -715,7 +700,6 @@ export interface GqlCWatchState {
     centerLon: Scalars['Float']['output'];
     dataSources: Array<GqlCWatchDataSourceStatus>;
     description: Scalars['String']['output'];
-    highRiskZones: Array<GqlCHighRiskZone>;
     incidents: Array<GqlCIncident>;
     osintAlerts: Array<GqlCOsintAlert>;
     protectedAssets: Array<GqlCProtectedAsset>;
@@ -1309,7 +1293,6 @@ export type GqlCWatchFieldsFragment = {
         }>;
     }>;
     osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
-    highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
 };
 
 export type GqlCWatchPageQueryVariables = Exact<{ [key: string]: never }>;
@@ -1384,7 +1367,6 @@ export type GqlCWatchPageQuery = {
                 }>;
             }>;
             osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
-            highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
         };
         scenarios: Array<{ scenarioId: string; title: string; description: string }>;
     };
@@ -1463,7 +1445,6 @@ export type GqlCVesselSelectMutation = {
                 }>;
             }>;
             osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
-            highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
         } | null;
     };
 };
@@ -1549,7 +1530,6 @@ export type GqlCAlertAcknowledgeMutation = {
                 }>;
             }>;
             osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
-            highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
         } | null;
     };
 };
@@ -1625,7 +1605,6 @@ export type GqlCScenarioResetMutation = {
                 }>;
             }>;
             osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
-            highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
         } | null;
     };
 };
@@ -1703,7 +1682,6 @@ export type GqlCMockAisSetEnabledMutation = {
                 }>;
             }>;
             osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
-            highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
         } | null;
     };
 };
@@ -1821,7 +1799,6 @@ export type GqlCSessionUpdatesSubscription = {
                       }>;
                   }>;
                   osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
-                  highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
               };
           };
 };
@@ -2552,28 +2529,6 @@ export const WatchFieldsFragmentDoc = {
                                 { kind: 'Field', name: { kind: 'Name', value: 'title' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'body' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'region' } },
-                            ],
-                        },
-                    },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'highRiskZones' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'zoneId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
                             ],
                         },
                     },
@@ -4283,28 +4238,6 @@ export const WatchPageDocument = {
                             ],
                         },
                     },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'highRiskZones' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'zoneId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
-                            ],
-                        },
-                    },
                 ],
             },
         },
@@ -4530,28 +4463,6 @@ export const VesselSelectDocument = {
                                 { kind: 'Field', name: { kind: 'Name', value: 'title' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'body' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'region' } },
-                            ],
-                        },
-                    },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'highRiskZones' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'zoneId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
                             ],
                         },
                     },
@@ -4832,28 +4743,6 @@ export const AlertAcknowledgeDocument = {
                             ],
                         },
                     },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'highRiskZones' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'zoneId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
-                            ],
-                        },
-                    },
                 ],
             },
         },
@@ -5065,28 +4954,6 @@ export const ScenarioResetDocument = {
                                 { kind: 'Field', name: { kind: 'Name', value: 'title' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'body' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'region' } },
-                            ],
-                        },
-                    },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'highRiskZones' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'zoneId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
                             ],
                         },
                     },
@@ -5315,28 +5182,6 @@ export const MockAisSetEnabledDocument = {
                                 { kind: 'Field', name: { kind: 'Name', value: 'title' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'body' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'region' } },
-                            ],
-                        },
-                    },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'highRiskZones' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'zoneId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
                             ],
                         },
                     },
@@ -5738,28 +5583,6 @@ export const SessionUpdatesDocument = {
                                 { kind: 'Field', name: { kind: 'Name', value: 'title' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'body' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'region' } },
-                            ],
-                        },
-                    },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'highRiskZones' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'zoneId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
                             ],
                         },
                     },

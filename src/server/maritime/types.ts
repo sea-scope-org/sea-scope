@@ -18,7 +18,7 @@ export type VesselIdentity = {
     flag: string;
 };
 
-export type AnomalyKind = 'speedDrop' | 'headingZigZag' | 'loitering' | 'aisDark' | 'impossibleJump';
+export type AnomalyKind = 'speedDrop' | 'headingZigZag' | 'aisDark' | 'impossibleJump';
 
 export type AnomalySeverity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -38,15 +38,7 @@ export type RiskLevel = 'green' | 'yellow' | 'orange' | 'red';
 export type RiskTrend = 'rising' | 'stable' | 'falling';
 
 export type RiskRule =
-    | 'baseline'
-    | 'speedDrop'
-    | 'headingZigZag'
-    | 'loitering'
-    | 'aisDark'
-    | 'impossibleJump'
-    | 'zoneEntry'
-    | 'nearProtectedAsset'
-    | 'aisRadarMismatch';
+    'baseline' | 'speedDrop' | 'headingZigZag' | 'aisDark' | 'impossibleJump' | 'nearProtectedAsset' | 'aisRadarMismatch';
 
 export type RiskFactor = {
     rule: RiskRule;
@@ -114,12 +106,6 @@ export type LatLon = {
     lon: number;
 };
 
-export type HighRiskZone = {
-    zoneId: string;
-    name: string;
-    ring: LatLon[];
-};
-
 /** Simulated non-AIS observation (radar / EO). Marked simulated in scenario data. */
 export type SimulatedObservation = {
     observationId: string;
@@ -150,7 +136,6 @@ export type ScenarioDefinition = {
     vessels: VesselIdentity[];
     tracks: Record<string, AisPosition[]>;
     osintAlerts: OsintAlert[];
-    highRiskZones: HighRiskZone[];
     protectedAssets: ProtectedAsset[];
     /** Clearly simulated multi-sensor inputs for demo credibility. */
     simulatedObservations: SimulatedObservation[];

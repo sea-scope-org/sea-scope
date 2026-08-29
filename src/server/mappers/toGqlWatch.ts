@@ -1,6 +1,5 @@
 import type {
     GqlSAnomaly,
-    GqlSHighRiskZone,
     GqlSIncident,
     GqlSLatLon,
     GqlSOsintAlert,
@@ -14,7 +13,7 @@ import type {
     GqlSWatchState,
 } from '../graphql/generated';
 import type { ScenarioPlayerState, ScenarioVesselState } from '../maritime/scenarioRuntime';
-import type { Anomaly, HighRiskZone, Incident, LatLon, OsintAlert, RiskEvent, RiskFactor, ScenarioDefinition } from '../maritime/types';
+import type { Anomaly, Incident, LatLon, OsintAlert, RiskEvent, RiskFactor, ScenarioDefinition } from '../maritime/types';
 import type { VesselIntelligence } from '../maritime/vesselIntelligenceStore';
 import type { WatchDataSourceStatus } from '../maritime/watchBoardRuntime';
 
@@ -124,14 +123,6 @@ function toGqlOsintAlert(alert: OsintAlert): GqlSOsintAlert {
     };
 }
 
-function toGqlHighRiskZone(zone: HighRiskZone): GqlSHighRiskZone {
-    return {
-        zoneId: zone.zoneId,
-        name: zone.name,
-        ring: zone.ring.map(toGqlLatLon),
-    };
-}
-
 function toGqlWatchDataSourceStatus(status: WatchDataSourceStatus): GqlSWatchDataSourceStatus {
     return {
         id: status.id,
@@ -161,7 +152,6 @@ export function toGqlWatchState(
         riskEvents: state.riskEvents.map(toGqlRiskEvent),
         incidents: state.incidents.map(toGqlIncident),
         osintAlerts: scenario.osintAlerts.map(toGqlOsintAlert),
-        highRiskZones: scenario.highRiskZones.map(toGqlHighRiskZone),
         // Geometries ship as static `/maritime/protected-infrastructure.geojson` so watch SSE stays lean.
         protectedAssets: [],
         dataSources: dataSources.map(toGqlWatchDataSourceStatus),

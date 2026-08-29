@@ -3,7 +3,12 @@ import type { ServerRuntime } from '../../domain/ServerRuntime';
 import { environmentVariables } from '../../env/environmentVariablesCreate';
 import { aisTheaterMapPoint } from '../aisTheater';
 import { DEFAULT_SCENARIO_ID, scenarioDefinitionGet, scenarioPositionSample } from '../scenarioRuntime';
-import { vesselTrackStoreMarkPersisted, vesselTrackStoreRemoveBySource, vesselTrackStoreUpsertPosition } from '../vesselTrackStore';
+import {
+    vesselTrackStoreMarkPersisted,
+    vesselTrackStoreRemoveBySource,
+    vesselTrackStoreRemoveMockExcept,
+    vesselTrackStoreUpsertPosition,
+} from '../vesselTrackStore';
 
 const REAL_TICK_MS = 500;
 const HISTORY_PERSIST_MIN_MS = 60_000;
@@ -69,7 +74,7 @@ function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
     const bbox = environmentVariables.aisStreamBoundingBox;
     const sampleMapped = aisTheaterMapPoint({ lat: 14.5, lon: 42.5 }, bbox);
     console.info(
-        `[mock-ais] feeder started (${scenario.title}) — mapped into live water corridor near ${sampleMapped.lat.toFixed(3)},${sampleMapped.lon.toFixed(3)}`,
+        `[mock-ais] feeder started (${scenario.title}, ${scenario.vessels.length} vessels) — mapped into live water corridor near ${sampleMapped.lat.toFixed(3)},${sampleMapped.lon.toFixed(3)}`,
     );
     serverRuntime.log.info(`Mock AIS feeder started (${scenario.scenarioId})`);
 
@@ -82,6 +87,8 @@ function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
         });
     };
 
+    const allowed = new Set(scenario.vessels.map((v) => v.mmsi));
+    vesselTrackStoreRemoveMockExcept(allowed);
     for (const vessel of scenario.vessels) {
         const position = scenarioPositionSample(scenario, vessel.mmsi, simMs);
         if (!position) continue;
@@ -95,18 +102,25 @@ function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
             const runtime = boundRuntime;
             if (!runtime) return;
 
-            const nextSimMs = simMs + scenario.tickIntervalMs;
-            if (nextSimMs > scenario.endSimMs) {
-                simMs = scenario.startSimMs;
+            // Re-read catalog each tick so HMR / scenario trims take effect without a full restart.
+            const active = scenarioDefinitionGet(DEFAULT_SCENARIO_ID);
+            if (!active) return;
+
+            const nextSimMs = simMs + active.tickIntervalMs;
+            if (nextSimMs > active.endSimMs) {
+                simMs = active.startSimMs;
                 console.info('[mock-ais] scenario loop restart');
             } else {
                 simMs = nextSimMs;
             }
 
-            for (const vessel of scenario.vessels) {
+            const keep = new Set(active.vessels.map((v) => v.mmsi));
+            vesselTrackStoreRemoveMockExcept(keep);
+
+            for (const vessel of active.vessels) {
                 if (!mockFeederStillCurrent(generation)) return;
 
-                const position = scenarioPositionSample(scenario, vessel.mmsi, simMs);
+                const position = scenarioPositionSample(active, vessel.mmsi, simMs);
                 if (!position) continue;
                 const tracked = upsertMock(vessel, position);
                 if (!tracked) continue;

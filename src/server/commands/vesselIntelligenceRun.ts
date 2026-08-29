@@ -120,7 +120,6 @@ async function vesselIntelligenceRun({
                 : null,
         )}`,
         `Simulated observations (mock sensors): ${JSON.stringify(simObs)}`,
-        `High-risk zones: ${JSON.stringify(scenario.highRiskZones.map((zone) => ({ zoneId: zone.zoneId, name: zone.name })))}`,
     ].join('\n');
 
     const generatedAt = new Date().toISOString();

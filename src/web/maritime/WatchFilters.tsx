@@ -12,7 +12,6 @@ const LAYER_OPTIONS: ReadonlyArray<{ key: keyof WatchLayerFilters; label: string
     { key: 'cables', label: 'Submarine cables', section: 'infrastructure' },
     { key: 'pipelinesOilGas', label: 'Oil & gas pipelines', section: 'infrastructure' },
     { key: 'pipelinesOther', label: 'Other pipelines', section: 'infrastructure' },
-    { key: 'highRiskZones', label: 'High-risk zones', section: 'chart' },
     { key: 'trackTails', label: 'Track tails', section: 'chart' },
     { key: 'radarContacts', label: 'Radar contacts', section: 'chart' },
 ];
@@ -152,7 +151,10 @@ function FilterRow({
     onCheckedChange: (checked: boolean) => void;
 }) {
     return (
-        <label htmlFor={id} className="flex cursor-pointer items-center gap-2 text-xs text-foreground">
+        <label
+            htmlFor={id}
+            className="flex cursor-pointer items-center gap-2 rounded-sm px-1 py-0.5 text-xs text-foreground transition-colors hover:bg-muted/50"
+        >
             <Checkbox id={id} checked={checked} onCheckedChange={(value) => onCheckedChange(value === true)} />
             <span className="min-w-0 truncate">{label}</span>
         </label>

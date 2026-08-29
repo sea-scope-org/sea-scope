@@ -88,7 +88,7 @@ export function WatchCase({
                 <div>
                     <button
                         type="button"
-                        className="flex w-full items-center justify-between gap-2 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase hover:text-foreground"
+                        className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm text-[10px] font-semibold tracking-wider text-muted-foreground uppercase transition-colors hover:text-foreground"
                         aria-expanded={navOpen}
                         onClick={() => setNavOpen((open) => !open)}
                     >
@@ -195,8 +195,10 @@ function EvidenceTabs({
                         role="tab"
                         aria-selected={selected}
                         className={cn(
-                            '-mb-px border-b-2 px-3 py-2 text-[11px] font-semibold tracking-wide uppercase transition-colors',
-                            selected ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                            '-mb-px cursor-pointer border-b-2 px-3 py-2 text-[11px] font-semibold tracking-wide uppercase transition-colors',
+                            selected
+                                ? 'border-primary text-foreground'
+                                : 'border-transparent text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground',
                         )}
                         onClick={() => onPanelChange(tab.id)}
                     >

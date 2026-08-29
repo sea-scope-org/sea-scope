@@ -38,7 +38,7 @@ export interface GqlSAnomaly {
     title: Scalars['String']['output'];
 }
 
-export type GqlSAnomalyKind = 'aisDark' | 'headingZigZag' | 'impossibleJump' | 'loitering' | 'speedDrop';
+export type GqlSAnomalyKind = 'aisDark' | 'headingZigZag' | 'impossibleJump' | 'speedDrop';
 
 export type GqlSAnomalySeverity = 'critical' | 'high' | 'low' | 'medium';
 
@@ -362,13 +362,6 @@ export interface GqlSFileUpload {
     url: Scalars['String']['output'];
 }
 
-export interface GqlSHighRiskZone {
-    __typename?: 'HighRiskZone';
-    name: Scalars['String']['output'];
-    ring: Array<GqlSLatLon>;
-    zoneId: Scalars['ID']['output'];
-}
-
 export interface GqlSIncident {
     __typename?: 'Incident';
     closedAtSimMs?: Maybe<Scalars['Float']['output']>;
@@ -467,15 +460,7 @@ export interface GqlSRiskFactor {
 export type GqlSRiskLevel = 'green' | 'orange' | 'red' | 'yellow';
 
 export type GqlSRiskRule =
-    | 'aisDark'
-    | 'aisRadarMismatch'
-    | 'baseline'
-    | 'headingZigZag'
-    | 'impossibleJump'
-    | 'loitering'
-    | 'nearProtectedAsset'
-    | 'speedDrop'
-    | 'zoneEntry';
+    'aisDark' | 'aisRadarMismatch' | 'baseline' | 'headingZigZag' | 'impossibleJump' | 'nearProtectedAsset' | 'speedDrop';
 
 export type GqlSRiskTrend = 'falling' | 'rising' | 'stable';
 
@@ -712,7 +697,6 @@ export interface GqlSWatchState {
     centerLon: Scalars['Float']['output'];
     dataSources: Array<GqlSWatchDataSourceStatus>;
     description: Scalars['String']['output'];
-    highRiskZones: Array<GqlSHighRiskZone>;
     incidents: Array<GqlSIncident>;
     osintAlerts: Array<GqlSOsintAlert>;
     protectedAssets: Array<GqlSProtectedAsset>;
@@ -922,7 +906,6 @@ export type GqlSResolversTypes = ResolversObject<{
     DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
     FileUpload: ResolverTypeWrapper<GqlSFileUpload>;
     Float: ResolverTypeWrapper<Scalars['Float']['output']>;
-    HighRiskZone: ResolverTypeWrapper<GqlSHighRiskZone>;
     ID: ResolverTypeWrapper<Scalars['ID']['output']>;
     Incident: ResolverTypeWrapper<GqlSIncident>;
     IncidentStatus: GqlSIncidentStatus;
@@ -1028,7 +1011,6 @@ export type GqlSResolversParentTypes = ResolversObject<{
     DateTime: Scalars['DateTime']['output'];
     FileUpload: GqlSFileUpload;
     Float: Scalars['Float']['output'];
-    HighRiskZone: GqlSHighRiskZone;
     ID: Scalars['ID']['output'];
     Incident: GqlSIncident;
     IncidentTimelineEvent: GqlSIncidentTimelineEvent;
@@ -1558,15 +1540,6 @@ export type GqlSFileUploadResolvers<
     url?: Resolver<GqlSResolversTypes['String'], ParentType, ContextType>;
 }>;
 
-export type GqlSHighRiskZoneResolvers<
-    ContextType = any,
-    ParentType extends GqlSResolversParentTypes['HighRiskZone'] = GqlSResolversParentTypes['HighRiskZone'],
-> = ResolversObject<{
-    name?: Resolver<GqlSResolversTypes['String'], ParentType, ContextType>;
-    ring?: Resolver<Array<GqlSResolversTypes['LatLon']>, ParentType, ContextType>;
-    zoneId?: Resolver<GqlSResolversTypes['ID'], ParentType, ContextType>;
-}>;
-
 export type GqlSIncidentResolvers<
     ContextType = any,
     ParentType extends GqlSResolversParentTypes['Incident'] = GqlSResolversParentTypes['Incident'],
@@ -1923,7 +1896,6 @@ export type GqlSWatchStateResolvers<
     centerLon?: Resolver<GqlSResolversTypes['Float'], ParentType, ContextType>;
     dataSources?: Resolver<Array<GqlSResolversTypes['WatchDataSourceStatus']>, ParentType, ContextType>;
     description?: Resolver<GqlSResolversTypes['String'], ParentType, ContextType>;
-    highRiskZones?: Resolver<Array<GqlSResolversTypes['HighRiskZone']>, ParentType, ContextType>;
     incidents?: Resolver<Array<GqlSResolversTypes['Incident']>, ParentType, ContextType>;
     osintAlerts?: Resolver<Array<GqlSResolversTypes['OsintAlert']>, ParentType, ContextType>;
     protectedAssets?: Resolver<Array<GqlSResolversTypes['ProtectedAsset']>, ParentType, ContextType>;
@@ -1986,7 +1958,6 @@ export type GqlSResolvers<ContextType = any> = ResolversObject<{
     Date?: GraphQLScalarType;
     DateTime?: GraphQLScalarType;
     FileUpload?: GqlSFileUploadResolvers<ContextType>;
-    HighRiskZone?: GqlSHighRiskZoneResolvers<ContextType>;
     Incident?: GqlSIncidentResolvers<ContextType>;
     IncidentTimelineEvent?: GqlSIncidentTimelineEventResolvers<ContextType>;
     JSON?: GraphQLScalarType;
@@ -2027,9 +1998,9 @@ export const isDefinedNonNullAny = (v: any): v is definedNonNullAny => v !== und
 export const definedNonNullAnySchema = z.any().refine((v) => isDefinedNonNullAny(v));
 
 export const GqlSAnomalyKindSchema: z.ZodType<
-    'aisDark' | 'headingZigZag' | 'impossibleJump' | 'loitering' | 'speedDrop',
-    'aisDark' | 'headingZigZag' | 'impossibleJump' | 'loitering' | 'speedDrop'
-> = z.enum(['aisDark', 'headingZigZag', 'impossibleJump', 'loitering', 'speedDrop']);
+    'aisDark' | 'headingZigZag' | 'impossibleJump' | 'speedDrop',
+    'aisDark' | 'headingZigZag' | 'impossibleJump' | 'speedDrop'
+> = z.enum(['aisDark', 'headingZigZag', 'impossibleJump', 'speedDrop']);
 
 export const GqlSAnomalySeveritySchema: z.ZodType<'critical' | 'high' | 'low' | 'medium', 'critical' | 'high' | 'low' | 'medium'> = z.enum([
     'critical',
@@ -2062,35 +2033,9 @@ export const GqlSRiskLevelSchema: z.ZodType<'green' | 'orange' | 'red' | 'yellow
 ]);
 
 export const GqlSRiskRuleSchema: z.ZodType<
-    | 'aisDark'
-    | 'aisRadarMismatch'
-    | 'baseline'
-    | 'headingZigZag'
-    | 'impossibleJump'
-    | 'loitering'
-    | 'nearProtectedAsset'
-    | 'speedDrop'
-    | 'zoneEntry',
-    | 'aisDark'
-    | 'aisRadarMismatch'
-    | 'baseline'
-    | 'headingZigZag'
-    | 'impossibleJump'
-    | 'loitering'
-    | 'nearProtectedAsset'
-    | 'speedDrop'
-    | 'zoneEntry'
-> = z.enum([
-    'aisDark',
-    'aisRadarMismatch',
-    'baseline',
-    'headingZigZag',
-    'impossibleJump',
-    'loitering',
-    'nearProtectedAsset',
-    'speedDrop',
-    'zoneEntry',
-]);
+    'aisDark' | 'aisRadarMismatch' | 'baseline' | 'headingZigZag' | 'impossibleJump' | 'nearProtectedAsset' | 'speedDrop',
+    'aisDark' | 'aisRadarMismatch' | 'baseline' | 'headingZigZag' | 'impossibleJump' | 'nearProtectedAsset' | 'speedDrop'
+> = z.enum(['aisDark', 'aisRadarMismatch', 'baseline', 'headingZigZag', 'impossibleJump', 'nearProtectedAsset', 'speedDrop']);
 
 export const GqlSRiskTrendSchema: z.ZodType<'falling' | 'rising' | 'stable', 'falling' | 'rising' | 'stable'> = z.enum([
     'falling',

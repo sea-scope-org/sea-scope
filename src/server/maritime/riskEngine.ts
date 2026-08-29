@@ -18,10 +18,8 @@ export const RISK_BASELINE = 12;
 const RISK_RULE_DELTAS: Record<Exclude<RiskRule, 'baseline'>, number> = {
     speedDrop: 18,
     headingZigZag: 12,
-    loitering: 22,
     aisDark: 25,
     impossibleJump: 30,
-    zoneEntry: 12,
     nearProtectedAsset: 18,
     aisRadarMismatch: 20,
 };
@@ -29,10 +27,8 @@ const RISK_RULE_DELTAS: Record<Exclude<RiskRule, 'baseline'>, number> = {
 const RULE_EXPLANATIONS: Record<Exclude<RiskRule, 'baseline'>, string> = {
     speedDrop: 'Sudden speed reduction detected on AIS',
     headingZigZag: 'Erratic heading changes on AIS track',
-    loitering: 'Loitering inside a monitored high-risk zone',
     aisDark: 'AIS transmission interrupted',
     impossibleJump: 'Impossible AIS position jump',
-    zoneEntry: 'Inside monitored high-risk approach zone',
     nearProtectedAsset: 'Within risk radius of protected asset',
     aisRadarMismatch: 'AIS and simulated radar positions disagree',
 };
@@ -121,7 +117,6 @@ export type RiskComputeInput = {
     position: LatLon | null;
     sogKn: number | null;
     aisDark: boolean;
-    inHighRiskZone: boolean;
     stickyKinds: ReadonlySet<AnomalyKind>;
     protectedAssets: ReadonlyArray<ProtectedAsset>;
     simulatedObservations: ReadonlyArray<SimulatedObservation>;
@@ -165,17 +160,11 @@ function riskFactorsCompute(input: RiskComputeInput): {
     if (input.stickyKinds.has('headingZigZag')) {
         factors.push(factor('headingZigZag', 'ais:kinematics'));
     }
-    if (input.stickyKinds.has('loitering')) {
-        factors.push(factor('loitering', 'ais:kinematics'));
-    }
     if (input.stickyKinds.has('impossibleJump')) {
         factors.push(factor('impossibleJump', 'ais:kinematics'));
     }
-    if (input.aisDark || input.stickyKinds.has('aisDark')) {
+    if (input.aisDark) {
         factors.push(factor('aisDark', 'ais:gap'));
-    }
-    if (input.inHighRiskZone) {
-        factors.push(factor('zoneEntry', 'zone:high-risk'));
     }
 
     if (input.position) {

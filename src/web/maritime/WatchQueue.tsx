@@ -58,7 +58,7 @@ export function WatchQueue({ watch, onSelectVessel, visibleShipTypes, disabled =
                 <div className="shrink-0 border-t border-sidebar-border">
                     <button
                         type="button"
-                        className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase hover:bg-muted/40"
+                        className="flex w-full cursor-pointer items-center justify-between gap-2 px-4 py-2.5 text-left text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase transition-colors hover:bg-muted/40 hover:text-foreground"
                         aria-expanded={osintOpen}
                         onClick={() => setOsintOpen((open) => !open)}
                     >
@@ -115,8 +115,8 @@ function QueueRow({
                 onClick={onSelect}
                 disabled={disabled}
                 className={cn(
-                    'w-full border-l-2 border-y border-r border-border bg-background px-2.5 py-2 text-left transition-colors outline-none',
-                    'rounded-md hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                    'w-full cursor-pointer border-l-2 border-y border-r border-border bg-background px-2.5 py-2 text-left transition-colors outline-none',
+                    'rounded-md hover:border-border hover:bg-muted/60 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
                     'active:bg-muted disabled:pointer-events-none disabled:opacity-50',
                     riskAccentClass(vessel.riskLevel),
                 )}

@@ -96,10 +96,6 @@ export function scenarioOffsetToBbox(scenario: ScenarioDefinition, bbox: Environ
         centerLat: center.lat,
         centerLon: center.lon,
         zoom: 9,
-        highRiskZones: scenario.highRiskZones.map((zone) => ({
-            ...zone,
-            ring: zone.ring.map(map),
-        })),
         protectedAssets: scenario.protectedAssets.map((asset) => ({
             ...asset,
             path: asset.path.map(map),
