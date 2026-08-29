@@ -27,18 +27,12 @@ const RISK_TONE: Record<WatchVessel['riskLevel'], string> = {
     red: 'border-red-500/35 bg-red-50 text-red-700',
 };
 
-const TREND_META: Record<WatchVessel['riskTrend'], { Icon: PreviewIcon; label: string }> = {
-    falling: { Icon: ArrowDownRightIcon, label: 'Falling' },
-    rising: { Icon: ArrowUpRightIcon, label: 'Rising' },
-    steady: { Icon: ArrowRightIcon, label: 'Steady' },
-};
-
 export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVessel; nowMs: number; assetName: string | null }) {
     const position = vessel.position;
     const familyMeta = VESSEL_FAMILY_COLORS[vesselTypeNormalize(vessel.shipType)];
     const projection = vesselProjection(vessel, nowMs);
     const reason = vessel.activeFactors.at(-1)?.explanation;
-    const trend = TREND_META[vessel.riskTrend];
+    const trend = trendMeta(vessel.riskTrend);
     const aisStatus = vessel.aisDark ? 'AIS dark' : position ? freshnessLabel(position.timestamp, nowMs) : 'No AIS fix';
 
     return (
@@ -104,6 +98,12 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
             </div>
         </div>
     );
+}
+
+function trendMeta(trend: WatchVessel['riskTrend']): { Icon: PreviewIcon; label: string } {
+    if (trend === 'rising') return { Icon: ArrowUpRightIcon, label: 'Rising' };
+    if (trend === 'falling') return { Icon: ArrowDownRightIcon, label: 'Falling' };
+    return { Icon: ArrowRightIcon, label: 'Stable' };
 }
 
 function PreviewMetric({ Icon, label, value }: { Icon: PreviewIcon; label: string; value: string }) {
