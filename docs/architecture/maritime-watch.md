@@ -20,6 +20,9 @@ Shared across sources:
 - A **rule-based risk engine** (`riskEngine`) over the fused vessel set.
 - Galaxy Leader overlays (Cable C17, zones, OSINT, simulated radar/EO) on the board.
 - The LLM Copilot (`vesselIntelligenceRun`) **explains** structured risk evidence only.
+- The chart keeps vessel identity and attention independent: normalized ship family controls marker color, while the existing risk bands
+  control external fixed screen-space halos. Client-only constant-course/speed projections add short-horizon context without changing the
+  server risk engine or claiming vessel intent.
 
 ### Persistence
 

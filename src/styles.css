@@ -163,11 +163,22 @@
     }
 }
 
+@keyframes naval-map-critical-halo {
+    0%,
+    100% {
+        opacity: 0.35;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
 /* Honour the user's OS-level reduce-motion preference. Arbitrary Tailwind
  * `animate-[…]` utilities are matched by substring. */
 @media (prefers-reduced-motion: reduce) {
     [class*='nav-progress-grow'],
-    [class*='naval-map-arrival-ring'] {
+    [class*='naval-map-arrival-ring'],
+    [class*='naval-map-critical-halo'] {
         animation: none;
     }
 }
