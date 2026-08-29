@@ -65,7 +65,7 @@ export function VesselMarker({
             ) : null}
             <span className="relative z-10" style={{ opacity, transform: `rotate(${position.heading}deg)` }} aria-hidden>
                 <span
-                    className="block size-0 border-x-[6px] border-b-[15px] border-x-transparent drop-shadow-[0_1px_1px_rgba(15,23,42,0.8)]"
+                    className="block size-0 border-x-[6px] border-b-15 border-x-transparent drop-shadow-[0_1px_1px_rgba(15,23,42,0.8)]"
                     style={{ borderBottomColor: vesselTypeColor(vessel.shipType) }}
                 />
             </span>

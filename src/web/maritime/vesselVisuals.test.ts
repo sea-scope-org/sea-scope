@@ -38,9 +38,7 @@ describe('vesselProjection', () => {
     });
 
     it('suppresses stale and nearly stationary estimates', () => {
-        expect(vesselProjection({ ...vessel, position: { ...vessel.position!, sog: 0.2 } } as WatchVessel, now)).toEqual([]);
-        expect(
-            vesselProjection({ ...vessel, position: { ...vessel.position!, timestamp: '2026-08-29T11:55:00Z' } } as WatchVessel, now),
-        ).toEqual([]);
+        expect(vesselProjection({ ...vessel, position: { ...vessel.position!, sog: 0.2 } }, now)).toEqual([]);
+        expect(vesselProjection({ ...vessel, position: { ...vessel.position!, timestamp: '2026-08-29T11:55:00Z' } }, now)).toEqual([]);
     });
 });

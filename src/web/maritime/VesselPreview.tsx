@@ -1,5 +1,5 @@
 import type { WatchVessel } from './vesselVisuals';
-import { freshnessLabel, vesselProjection, vesselTypeNormalize, VESSEL_FAMILY_COLORS } from './vesselVisuals';
+import { freshnessLabel, VESSEL_FAMILY_COLORS, vesselProjection, vesselTypeNormalize } from './vesselVisuals';
 
 export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVessel; nowMs: number; assetName: string | null }) {
     const position = vessel.position;
@@ -9,7 +9,7 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
     const trend = vessel.riskTrend === 'rising' ? '↑' : vessel.riskTrend === 'falling' ? '↓' : '→';
     return (
         <div
-            className="pointer-events-none absolute bottom-9 left-1/2 z-50 w-64 -translate-x-1/2 rounded-md border border-slate-700 bg-slate-950/95 p-3 text-left text-[11px] leading-4 text-slate-200 shadow-xl"
+            className="pointer-events-none absolute bottom-9 left-1/2 z-50 w-64 -translate-x-1/2 rounded-md border border-slate-700 bg-slate-950/95 p-3 text-left text-[11px]/4 text-slate-200 shadow-xl"
             role="tooltip"
         >
             <p className="truncate text-xs font-semibold tracking-wide text-white uppercase">{vessel.name || 'Unknown'}</p>

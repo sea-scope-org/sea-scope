@@ -7,9 +7,6 @@ import type { GqlCWatchFieldsFragment } from '../graphql/generated';
 import { useIsMobile } from '../hooks/use-mobile';
 import { cn } from '../utils/cn';
 import { navalChartTintApply } from './navalChartTint';
-import { VesselMarker } from './VesselMarker';
-import { VesselPreview } from './VesselPreview';
-import { vesselProjection } from './vesselVisuals';
 import {
     NAVAL_MAP_FOCUS_DURATION_MS,
     navalMapCaseZoom,
@@ -19,6 +16,9 @@ import {
     navalMapFocusPrefersReducedMotion,
 } from './navalMapFocus';
 import type { NavalMapFocusRequest } from './navalMapFocus';
+import { VesselMarker } from './VesselMarker';
+import { VesselPreview } from './VesselPreview';
+import { vesselProjection } from './vesselVisuals';
 import type { WatchLayerFilters } from './watchFilterState';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
