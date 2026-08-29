@@ -16,21 +16,27 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 4. Toolbar **Filters** toggles chart layers (protected assets, high-risk zones, track tails, radar contacts) and vessel `shipType`s. Filters
    are client-only and shared by the chart, Queue, and toolbar band counts (all on by default; **Show all** resets). A vessel already in
    **Case** stays on the map if its type is unchecked; Queue still hides unchecked types.
-5. Vessels appear on the chart colored by risk band; track tails and protected assets are drawn (navy solid cables, dashed bronze pipelines,
-   with name labels from zoom 5+); selecting one opens **Case** mode in the right rail.
-6. **Chart focus:** Queue selection, demo auto-select, and Case **Locate on chart** soft-ease the camera to the contact (sidebar padding,
+5. Vessel marker color identifies the vessel family while an independent, discrete halo communicates elevated risk (none for Green, subtle
+   Yellow, stronger Orange, and a slow pulsing Red). Heading, selection outline, and freshness opacity remain separate encodings. Protected
+   assets are drawn (navy solid cables, dashed bronze pipelines, with name labels from zoom 5+). Selecting a vessel opens **Case** mode in
+   the right rail.
+6. A 200 ms stable hover or keyboard focus opens a read-only vessel preview with identity, textual risk score/trend, navigation data,
+   freshness (or AIS dark), available sensor context when present, the top Why now factor, and protected-asset relationship. With track
+   tails on, all contacts keep muted observed tails; hover or selection strengthens the focused tail and, when AIS is fresh and speed/course
+   are usable, a dashed deterministic +10/+20 minute projection explicitly labeled as calculated rather than declared intent.
+7. **Chart focus:** Queue selection, demo auto-select, and Case **Locate on chart** soft-ease the camera to the contact (sidebar padding,
    modest case zoom). Map marker clicks select without panning. Clear Case / Reset restore the theater overview. Already-in-view contacts
    only strengthen the marker highlight. Open-incident focus gets a one-shot arrival ring. The camera never tracks live AIS ticks.
-7. Live ticks / anomalies / AI briefs arrive over `sessionUpdates` (imperative URQL subscription).
-8. Sidebar **Queue** (no selection): one ranked attention list (open Red incidents first, then red → orange → yellow), respecting ship-type
+8. Live ticks / anomalies / AI briefs arrive over `sessionUpdates` (imperative URQL subscription).
+9. Sidebar **Queue** (no selection): one ranked attention list (open Red incidents first, then red → orange → yellow), respecting ship-type
    filters. Theater OSINT is a collapsed disclosure at the bottom. Band counts live in the toolbar, not the rail.
-9. Sidebar **Case** (vessel selected): sticky identity + Why now (top factors) + Acknowledge / Locate on chart / Request briefing; evidence
-   is one panel at a time (Timeline | Anomalies | Brief). Timeline merges risk-score changes and incident events. OSINT is not shown in
-   Case.
-10. **Request briefing** ACKs via `vesselIntelligenceRequest` then shows progress until `SessionUpdateIntelligence` (toast on start failure
+10. Sidebar **Case** (vessel selected): sticky identity + Why now (top factors) + Acknowledge / Locate on chart / Request briefing; evidence
+    is one panel at a time (Timeline | Anomalies | Brief). Timeline merges risk-score changes and incident events. OSINT is not shown in
+    Case.
+11. **Request briefing** ACKs via `vesselIntelligenceRequest` then shows progress until `SessionUpdateIntelligence` (toast on start failure
     / timeout; Gemini failures may still publish a stub brief).
-11. When the demo stream is on, the first high/critical anomaly auto-selects Galaxy Leader (`538090574`) once and focuses the chart.
-12. When the demo scenario reaches the end, it loops so the board stays live.
+12. When the demo stream is on, the first high/critical anomaly auto-selects Galaxy Leader (`538090574`) once and focuses the chart.
+13. When the demo scenario reaches the end, it loops so the board stays live.
 
 ## Options considered
 
@@ -74,7 +80,7 @@ Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory p
 | Route + SEO        | `src/routes/watch.tsx`                                                                                                                                                                                  |
 | Operations         | `src/routes/WatchPage.graphql`                                                                                                                                                                          |
 | Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                                                                                                 |
-| Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts` + `navalMapFocus.ts`                                                                                                       |
+| Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `VesselMarker.tsx` + `VesselPreview.tsx` + `vesselVisuals.ts` + `navalChartTint.ts` + `navalMapFocus.ts`                                       |
 | Toolbar            | `src/web/maritime/WatchToolbar.tsx` (risk bands, alerts, Demo toggle, Filters)                                                                                                                          |
 | Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (layers + ship types; owned in `watch.tsx`)                                                                                                 |
 | Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail)                                                                              |
@@ -96,3 +102,18 @@ Chart gotchas (MapLibre v6 + Vite):
   the canvas mounts but vector tiles never load.
 - `@tanstack/devtools-vite` must ignore `NavalMapClient` / MapLibre `Source`+`Layer` for `data-tsd-source` injection (see `vite.config.ts`)
   — otherwise MapLibre rejects the attribute and the chart fails to mount.
+
+### Chart visual encoding
+
+The centralized vessel-family palette is Cargo blue (`#2563eb`), Tanker burgundy (`#9f1239`), Passenger purple (`#7c3aed`), Fishing green
+(`#16a34a`), Tug/service orange (`#ea580c`), Pleasure cyan (`#06b6d4`), Government black (`#111827`), and Unknown gray (`#64748b`). Tanker
+burgundy stays distinct from risk-red halos. Risk never changes that marker color. Yellow, Orange, and Red use increasingly strong
+fixed-size screen-space halos; Green has no halo. Only Red has a 2.4-second opacity pulse, with a strong static halo retained when reduced
+motion is requested. AIS dark adds an independent dashed ring (separate from risk). These HTML markers keep critical risk discoverable
+across zoom levels. Freshness fades the marker at one and three minutes and is also stated explicitly in the preview.
+
+When track tails are enabled, every contact with a usable tail is drawn muted; the hovered or selected contact is strengthened. The MVP
+projection is constant course and speed over 10 and 20 minutes for the focused contact only. It is suppressed for positions at least three
+minutes old, speeds below 0.8 knots, or invalid course/heading. True-scale hulls, destination/ETA (not present on the Watch model — omitted
+from the preview rather than shown as “Not received”), track-gap segmentation (track-tail points have no timestamps), and calculated
+protected-zone intersection/CPA are intentionally deferred rather than fabricated.
