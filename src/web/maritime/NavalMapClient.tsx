@@ -17,7 +17,6 @@ import {
 } from './navalMapFocus';
 import type { NavalMapFocusRequest } from './navalMapFocus';
 import { VesselMarker } from './VesselMarker';
-import { VesselPreview } from './VesselPreview';
 import { vesselProjection } from './vesselVisuals';
 import type { WatchLayerFilters } from './watchFilterState';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -75,7 +74,6 @@ export function NavalMapClient({
     const [arrivalPulseMmsi, setArrivalPulseMmsi] = useState<string | null>(null);
     const [previewMmsi, setPreviewMmsi] = useState<string | null>(null);
     const [nowMs, setNowMs] = useState(() => Date.now());
-    const previewTimerRef = useRef<number | null>(null);
 
     const zoneGeoJson = useMemo(() => zonesToGeoJson(highRiskZones), [highRiskZones]);
     const assetGeoJson = useMemo(() => assetsToGeoJson(protectedAssets), [protectedAssets]);
@@ -86,22 +84,6 @@ export function NavalMapClient({
     useEffect(() => {
         const timer = window.setInterval(() => setNowMs(Date.now()), 15_000);
         return () => window.clearInterval(timer);
-    }, []);
-
-    useEffect(
-        () => () => {
-            if (previewTimerRef.current) window.clearTimeout(previewTimerRef.current);
-        },
-        [],
-    );
-
-    const previewSchedule = useCallback((mmsi: string) => {
-        if (previewTimerRef.current) window.clearTimeout(previewTimerRef.current);
-        previewTimerRef.current = window.setTimeout(() => setPreviewMmsi(mmsi), 200);
-    }, []);
-    const previewClear = useCallback(() => {
-        if (previewTimerRef.current) window.clearTimeout(previewTimerRef.current);
-        setPreviewMmsi(null);
     }, []);
 
     const applyFocusRequest = useCallback(
@@ -314,20 +296,18 @@ export function NavalMapClient({
                             anchor="center"
                             style={{ zIndex: previewOpen ? 30 : selected ? 20 : 1 }}
                         >
-                            <div className="relative">
-                                <VesselMarker
-                                    vessel={vessel}
-                                    nowMs={nowMs}
-                                    selected={selected}
-                                    arrivalPulse={arrivalPulse}
-                                    onClick={() => onSelect(vessel.mmsi)}
-                                    onPointerEnter={() => previewSchedule(vessel.mmsi)}
-                                    onPointerLeave={previewClear}
-                                    onFocus={() => setPreviewMmsi(vessel.mmsi)}
-                                    onBlur={previewClear}
-                                />
-                                {previewOpen ? <VesselPreview vessel={vessel} nowMs={nowMs} assetName={asset} /> : null}
-                            </div>
+                            <VesselMarker
+                                vessel={vessel}
+                                nowMs={nowMs}
+                                selected={selected}
+                                arrivalPulse={arrivalPulse}
+                                assetName={asset}
+                                onClick={() => onSelect(vessel.mmsi)}
+                                onPreviewOpenChange={(open) => {
+                                    if (open) setPreviewMmsi(vessel.mmsi);
+                                    else setPreviewMmsi((current) => (current === vessel.mmsi ? null : current));
+                                }}
+                            />
                         </Marker>
                     );
                 })}

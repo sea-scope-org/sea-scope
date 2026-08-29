@@ -22,11 +22,12 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
    Yellow, stronger Orange, and a slow pulsing Red). Heading, selection outline, and freshness opacity remain separate encodings. Protected
    assets are drawn (navy solid cables, dashed bronze pipelines, with name labels from zoom 5+). Selecting a vessel opens **Case** mode in
    the right rail.
-6. A 200 ms stable hover or keyboard focus opens a read-only vessel preview with identity, textual risk score/trend, navigation data,
-   freshness (or AIS dark), available sensor context when present, the top Why now factor, and protected-asset relationship. The hovered
-   (or selected) MapLibre marker raises its container `z-index` so the preview is not covered by neighboring ship markers. With track
-   tails on, all contacts keep muted observed tails; hover or selection strengthens the focused tail and, when AIS is fresh and speed/course
-   are usable, a dashed deterministic +10/+20 minute projection explicitly labeled as calculated rather than declared intent.
+6. A shadcn `HoverCard` (`openDelay` 200 ms) on each vessel marker opens a read-only preview on hover or keyboard focus — identity, textual
+   risk score/trend, navigation data, freshness (or AIS dark), available sensor context when present, the top Why now factor, and
+   protected-asset relationship. Content portals above the chart (`side="top"`); the hovered (or selected) MapLibre marker still raises its
+   container `z-index` so the trigger stays discoverable among neighbors. With track tails on, all contacts keep muted observed tails; hover
+   or selection strengthens the focused tail and, when AIS is fresh and speed/course are usable, a dashed deterministic +10/+20 minute
+   projection explicitly labeled as calculated rather than declared intent.
 7. **Chart focus:** Queue selection, demo auto-select, and Case **Locate on chart** soft-ease the camera to the contact (sidebar padding,
    modest case zoom). Map marker clicks select without panning. Clear Case / Reset restore the theater overview. Already-in-view contacts
    only strengthen the marker highlight. Open-incident focus gets a one-shot arrival ring. The camera never tracks live AIS ticks.

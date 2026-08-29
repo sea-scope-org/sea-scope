@@ -17,6 +17,7 @@ import {
     WeightIcon,
 } from 'lucide-react';
 import type { ComponentType, SVGProps } from 'react';
+import { Separator } from '../components/base/separator';
 import { cn } from '../utils/cn';
 import type { WatchVessel } from './vesselVisuals';
 import { freshnessLabel, VESSEL_FAMILY_COLORS, vesselProjection, vesselTypeNormalize } from './vesselVisuals';
@@ -52,15 +53,12 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
         : 'None';
 
     return (
-        <div
-            className="pointer-events-none absolute bottom-10 left-1/2 z-50 w-80 -translate-x-1/2 overflow-hidden rounded-md border border-border bg-card/95 text-left text-[11px]/4 text-card-foreground shadow-xl shadow-slate-950/15 backdrop-blur"
-            role="tooltip"
-        >
-            <div className="border-b border-border bg-background/75 px-3 py-2.5">
+        <div className="overflow-hidden text-left text-[11px]/4 text-popover-foreground">
+            <div className="border-b border-border bg-muted/40 px-3 py-2.5">
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                            <span className="flex size-7 shrink-0 items-center justify-center rounded-sm border border-border bg-card">
+                            <span className="flex size-7 shrink-0 items-center justify-center rounded-sm border border-border bg-popover">
                                 <ShipIcon className="size-4" style={{ color: familyMeta.color }} aria-hidden />
                             </span>
                             <div className="min-w-0">
@@ -95,7 +93,7 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
                 <PreviewTile Icon={RouteIcon} label="Projection" value={projectedDistance} />
             </div>
 
-            <div className="grid gap-1.5 p-3">
+            <div className="flex flex-col gap-1.5 p-3">
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
                     <PreviewDetail Icon={FlagIcon} label="Flag" value={vessel.flag || 'Unknown'} />
                     <PreviewDetail Icon={HashIcon} label="IMO" value={vessel.imo || 'Unknown'} />
@@ -116,7 +114,9 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
                     <p className="line-clamp-2 text-muted-foreground">{reason ?? 'No elevated factors'}</p>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-border pt-2 text-muted-foreground">
+                <Separator className="mt-1" />
+
+                <div className="flex items-center justify-between text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5">
                         <WeightIcon className="size-3.5" aria-hidden />
                         {familyMeta.label} profile
@@ -146,7 +146,7 @@ function PreviewTile({
     tone?: 'alert' | 'quiet';
 }) {
     return (
-        <div className="min-w-0 bg-card px-2.5 py-2">
+        <div className="min-w-0 bg-popover px-2.5 py-2">
             <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Icon className={cn('size-3.5 shrink-0', tone === 'alert' ? 'text-primary' : null)} aria-hidden />
                 <span className="font-medium uppercase tracking-wide">{label}</span>
