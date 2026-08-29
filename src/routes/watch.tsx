@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { useMutation } from 'urql';
 import { SidebarInset, SidebarProvider } from '../web/components/base/sidebar';
 import {
+    AisViewportClearDocument,
+    AisViewportReportDocument,
     AlertAcknowledgeDocument,
     MockAisSetEnabledDocument,
     ScenarioResetDocument,
@@ -65,11 +67,18 @@ function WatchPage() {
     const [, alertAcknowledge] = useMutation(AlertAcknowledgeDocument);
     const [, scenarioReset] = useMutation(ScenarioResetDocument);
     const [, mockAisSetEnabled] = useMutation(MockAisSetEnabledDocument);
+    const [, aisViewportReport] = useMutation(AisViewportReportDocument);
+    const [, aisViewportClear] = useMutation(AisViewportClearDocument);
 
     const [intelligenceBusy, setIntelligenceBusy] = useState(false);
     const [focusRequest, setFocusRequest] = useState<NavalMapFocusRequest | null>(null);
     const focusGenerationRef = useRef(0);
     const autoSelectedRef = useRef(false);
+    const viewportReportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const aisViewportReportRef = useRef(aisViewportReport);
+    aisViewportReportRef.current = aisViewportReport;
+    const aisViewportClearRef = useRef(aisViewportClear);
+    aisViewportClearRef.current = aisViewportClear;
 
     const applyWatchRef = useRef<(watch: GqlCWatchFieldsFragment | null) => void>(() => undefined);
     const requestChartFocusRef = useRef<(mmsi: string | null, arrivalPulse: boolean) => void>(() => undefined);
@@ -220,6 +229,26 @@ function WatchPage() {
         [applyWatch, clearIntelligence, mockAisSetEnabled, requestChartFocus],
     );
 
+    const onViewportChange = useCallback((bounds: { southLat: number; westLon: number; northLat: number; eastLon: number }) => {
+        if (viewportReportTimerRef.current) {
+            clearTimeout(viewportReportTimerRef.current);
+        }
+        viewportReportTimerRef.current = setTimeout(() => {
+            viewportReportTimerRef.current = null;
+            void aisViewportReportRef.current(bounds);
+        }, 750);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (viewportReportTimerRef.current) {
+                clearTimeout(viewportReportTimerRef.current);
+                viewportReportTimerRef.current = null;
+            }
+            void aisViewportClearRef.current({});
+        };
+    }, []);
+
     // Mutation only ACKs that Gemini work started; busy stays until SessionUpdateIntelligence.
     const onRequestIntelligence = useCallback(
         async (mmsi: string) => {
@@ -280,6 +309,7 @@ function WatchPage() {
                             selectedMmsi={liveWatch.selectedMmsi}
                             focusRequest={focusRequest}
                             onSelect={onSelectFromMap}
+                            onViewportChange={onViewportChange}
                         />
                     </div>
                 </SidebarInset>

@@ -1,6 +1,7 @@
 import { environmentVariables } from '../env/environmentVariablesCreate';
 import { aisStreamIngestIsStarted, aisStreamIngestStatus, aisStreamIngestStatusDetail } from './aisStreamIngest';
 import { scenarioOffsetToBbox } from './aisTheater';
+import { protectedInfrastructureAssets } from './infrastructure/protectedInfrastructureCatalog';
 import { aisGapDetect, kinematicsDetect, pointInPolygon } from './kinematicsDetect';
 import { RISK_BASELINE, riskCompute, riskLevelFromScore, stickyKindsFromAnomalies } from './riskEngine';
 import { DEFAULT_SCENARIO_ID, scenarioDefinitionGet } from './scenarioRuntime';
@@ -58,13 +59,54 @@ function boardEnsure(): WatchBoard {
 export function watchBoardOverlayScenario(): ScenarioDefinition {
     const scenario = scenarioDefinitionGet(DEFAULT_SCENARIO_ID);
     if (!scenario) throw new Error('Galaxy Leader scenario missing');
+
+    const center = {
+        lat: (environmentVariables.aisStreamBoundingBox.southLat + environmentVariables.aisStreamBoundingBox.northLat) / 2,
+        lon: (environmentVariables.aisStreamBoundingBox.westLon + environmentVariables.aisStreamBoundingBox.eastLon) / 2,
+    };
+    const protectedAssets = protectedInfrastructureAssets();
+
+    // Demo geometry (zones, simulated radar, OSINT) only when the mock feeder is
+    // running — otherwise live AIS would be scored against Red Sea overlays
+    // mapped into the Gibraltar theater. Real cables/pipelines stay WGS84.
+    if (!mockScenarioSourceIsStarted()) {
+        return {
+            ...scenario,
+            title: 'SeaScope watch — live',
+            description:
+                'Live AISStream watch board with real undersea cables and pipelines (OpenStreetMap). Enable Demo for Galaxy Leader incident tracks and theater overlays.',
+            centerLat: center.lat,
+            centerLon: center.lon,
+            zoom: 9,
+            highRiskZones: [],
+            protectedAssets,
+            simulatedObservations: [],
+            osintAlerts: [],
+            vessels: [],
+            tracks: {},
+        };
+    }
+
     const shifted = scenarioOffsetToBbox(scenario, environmentVariables.aisStreamBoundingBox);
     return {
         ...shifted,
+        protectedAssets,
         title: 'SeaScope watch — live + demo',
         description:
-            'Fused watch board: Galaxy Leader mock incident tracks (shifted into the live AIS bounding box) stream alongside AISStream positions. Cable C17, zones, and OSINT come from the demo scenario.',
+            'Fused watch board: Galaxy Leader mock incident tracks (shifted into the live AIS bounding box) stream alongside AISStream positions. Real undersea cables and pipelines (OpenStreetMap), zones, and OSINT overlay the theater.',
     };
+}
+
+/** Drop sticky risk/anomaly/incident state so live vessels do not keep demo scores after Demo is turned off. */
+export function watchBoardClearStickyState(): void {
+    const state = boardEnsure();
+    state.anomalies = [];
+    state.riskEvents = [];
+    state.incidents = [];
+    state.scoreByMmsi = new Map();
+    state.anomalyKeys = new Set();
+    state.lastTickAnomalies = [];
+    state.dirty = true;
 }
 
 function incidentOpen(mmsi: string, simMs: number, score: number, seedEvents: IncidentTimelineEvent[]): Incident {

@@ -1,7 +1,7 @@
 import { aisVesselPositionPersist } from '../../commands/aisVesselPositionPersist';
 import type { ServerRuntime } from '../../domain/ServerRuntime';
 import { environmentVariables } from '../../env/environmentVariablesCreate';
-import { aisStreamBoundingBoxOffset } from '../aisTheater';
+import { aisTheaterMapPoint } from '../aisTheater';
 import { DEFAULT_SCENARIO_ID, scenarioDefinitionGet, scenarioPositionSample } from '../scenarioRuntime';
 import { vesselTrackStoreMarkPersisted, vesselTrackStoreRemoveBySource, vesselTrackStoreUpsertPosition } from '../vesselTrackStore';
 
@@ -57,17 +57,19 @@ function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
     status = 'running';
     simMs = 0;
 
-    const offset = aisStreamBoundingBoxOffset(environmentVariables.aisStreamBoundingBox);
+    const bbox = environmentVariables.aisStreamBoundingBox;
+    const sampleMapped = aisTheaterMapPoint({ lat: 14.5, lon: 42.5 }, bbox);
     console.info(
-        `[mock-ais] feeder started (${scenario.title}) — offset Δlat=${offset.lat.toFixed(3)} Δlon=${offset.lon.toFixed(3)} into live bbox`,
+        `[mock-ais] feeder started (${scenario.title}) — mapped into live water corridor near ${sampleMapped.lat.toFixed(3)},${sampleMapped.lon.toFixed(3)}`,
     );
     serverRuntime.log.info(`Mock AIS feeder started (${scenario.scenarioId})`);
 
     const upsertMock = (vessel: (typeof scenario.vessels)[number], position: NonNullable<ReturnType<typeof scenarioPositionSample>>) => {
+        const mapped = aisTheaterMapPoint({ lat: position.lat, lon: position.lon }, bbox);
         return vesselTrackStoreUpsertPosition('mock', vessel, {
             ...position,
-            lat: position.lat + offset.lat,
-            lon: position.lon + offset.lon,
+            lat: mapped.lat,
+            lon: mapped.lon,
         });
     };
 

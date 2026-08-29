@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { DateResolver, DateTimeResolver, JSONResolver } from 'graphql-scalars';
+import { aisViewportClear, aisViewportReport } from '../commands/aisViewportReport';
 import { chatInputCollectionRespond } from '../commands/chatInputCollectionRespond';
 import { chatMessageCreate } from '../commands/chatMessageCreate';
 import { chatToolApprovalRespond } from '../commands/chatToolApprovalRespond';
@@ -41,6 +42,7 @@ import type {
     GqlSSession,
     GqlSSessionChatArgs,
     GqlSSessionMutation,
+    GqlSSessionMutationAisViewportReportArgs,
     GqlSSessionMutationAlertAcknowledgeArgs,
     GqlSSessionMutationChatInputCollectionRespondArgs,
     GqlSSessionMutationChatMessageCreateArgs,
@@ -152,6 +154,12 @@ export function resolversCreate(serverRuntime: ServerRuntime): GqlSResolvers {
             },
             mockAisSetEnabled(parent: GqlSSessionMutation, args: GqlSSessionMutationMockAisSetEnabledArgs, requestingSession: GqlSSession) {
                 return mockAisSetEnabled(parent, args, requestingSession, serverRuntime);
+            },
+            aisViewportReport(parent: GqlSSessionMutation, args: GqlSSessionMutationAisViewportReportArgs, requestingSession: GqlSSession) {
+                return aisViewportReport(parent, args, requestingSession, serverRuntime);
+            },
+            aisViewportClear(parent: GqlSSessionMutation, _args: Record<string, never>, requestingSession: GqlSSession) {
+                return aisViewportClear(parent, {}, requestingSession, serverRuntime);
             },
             chatMessageCreate(parent: GqlSSessionMutation, args: GqlSSessionMutationChatMessageCreateArgs, requestingSession: GqlSSession) {
                 return chatMessageCreate(

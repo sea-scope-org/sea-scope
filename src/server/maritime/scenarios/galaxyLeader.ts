@@ -1,4 +1,4 @@
-import type { AisPosition, OsintAlert, ProtectedAsset, ScenarioDefinition, SimulatedObservation, VesselIdentity } from '../types';
+import type { AisPosition, OsintAlert, ScenarioDefinition, SimulatedObservation, VesselIdentity } from '../types';
 
 const SCENARIO_ID = 'galaxy-leader';
 const TICK_MS = 60_000;
@@ -204,22 +204,6 @@ const osintAlerts: OsintAlert[] = [
     },
 ];
 
-/** Undersea cable corridor through the approach — demo protected infrastructure. */
-const protectedAssets: ProtectedAsset[] = [
-    {
-        assetId: 'cable-c17',
-        name: 'Cable C17',
-        type: 'cable',
-        path: [
-            { lat: 14.85, lon: 42.15 },
-            { lat: 14.55, lon: 42.35 },
-            { lat: 14.35, lon: 42.55 },
-            { lat: 14.2, lon: 42.75 },
-        ],
-        riskRadiusNm: 3,
-    },
-];
-
 /**
  * Simulated radar track for Galaxy Leader — diverges from AIS during loiter,
  * then persists as a dark contact after AIS drops. Clearly mock sensor input.
@@ -253,7 +237,7 @@ const galaxyLeaderScenario: ScenarioDefinition = {
     scenarioId: SCENARIO_ID,
     title: 'Galaxy Leader — Southern Red Sea',
     description:
-        'Historical-style AIS replay of the November 2023 Galaxy Leader hijacking near Bab el-Mandeb: normal transit, sudden speed drop and heading changes, then AIS dark, with a sanctions-related decoy jump and UKMTO-style OSINT. Includes protected Cable C17 and simulated radar/EO observations for contradiction demos.',
+        'Historical-style AIS replay of the November 2023 Galaxy Leader hijacking near Bab el-Mandeb: normal transit, sudden speed drop and heading changes, then AIS dark, with a sanctions-related decoy jump and UKMTO-style OSINT. Includes simulated radar/EO observations for contradiction demos. Protected cables/pipelines come from the real-WGS84 infrastructure catalog on the fused watch board.',
     centerLat: 14.5,
     centerLon: 42.5,
     zoom: 8,
@@ -280,7 +264,7 @@ const galaxyLeaderScenario: ScenarioDefinition = {
             ],
         },
     ],
-    protectedAssets,
+    protectedAssets: [],
     simulatedObservations,
 };
 

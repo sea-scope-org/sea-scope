@@ -172,6 +172,24 @@ mutation MockAisSetEnabled($enabled: Boolean!) {
     }
 }
 
+mutation AisViewportReport($southLat: Float!, $westLon: Float!, $northLat: Float!, $eastLon: Float!) {
+    session {
+        aisViewportReport(southLat: $southLat, westLon: $westLon, northLat: $northLat, eastLon: $eastLon) {
+            success
+            referenceId
+        }
+    }
+}
+
+mutation AisViewportClear {
+    session {
+        aisViewportClear {
+            success
+            referenceId
+        }
+    }
+}
+
 subscription SessionUpdates {
     sessionUpdates {
         __typename

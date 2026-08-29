@@ -504,6 +504,13 @@ export type GqlCSessionChatArgs = {
 
 export interface GqlCSessionMutation {
     __typename?: 'SessionMutation';
+    /** Drop this session’s viewport contribution from the AISStream union. */
+    aisViewportClear: GqlCMutationResult;
+    /**
+     * Report the watch chart viewport so AISStream can union it into the live
+     * subscription (alongside AISSTREAM_BBOX). Spans over 5° are hard-skipped.
+     */
+    aisViewportReport: GqlCMutationResult;
     alertAcknowledge?: Maybe<GqlCWatchState>;
     chatInputCollectionRespond?: Maybe<GqlCChatMessageCreateResult>;
     chatMessageCreate?: Maybe<GqlCChatMessageCreateResult>;
@@ -514,6 +521,13 @@ export interface GqlCSessionMutation {
     vesselIntelligenceRequest: GqlCMutationResult;
     vesselSelect?: Maybe<GqlCWatchState>;
 }
+
+export type GqlCSessionMutationAisViewportReportArgs = {
+    eastLon: Scalars['Float']['input'];
+    northLat: Scalars['Float']['input'];
+    southLat: Scalars['Float']['input'];
+    westLon: Scalars['Float']['input'];
+};
 
 export type GqlCSessionMutationAlertAcknowledgeArgs = {
     incidentId: Scalars['ID']['input'];
@@ -1733,6 +1747,19 @@ export type GqlCMockAisSetEnabledMutation = {
         } | null;
     };
 };
+
+export type GqlCAisViewportReportMutationVariables = Exact<{
+    southLat: number;
+    westLon: number;
+    northLat: number;
+    eastLon: number;
+}>;
+
+export type GqlCAisViewportReportMutation = { session: { aisViewportReport: { success: boolean; referenceId: string | null } } };
+
+export type GqlCAisViewportClearMutationVariables = Exact<{ [key: string]: never }>;
+
+export type GqlCAisViewportClearMutation = { session: { aisViewportClear: { success: boolean; referenceId: string | null } } };
 
 export type GqlCSessionUpdatesSubscriptionVariables = Exact<{ [key: string]: never }>;
 
@@ -5508,6 +5535,120 @@ export const MockAisSetEnabledDocument = {
         },
     ],
 } as unknown as DocumentNode<GqlCMockAisSetEnabledMutation, GqlCMockAisSetEnabledMutationVariables>;
+export const AisViewportReportDocument = {
+    kind: 'Document',
+    definitions: [
+        {
+            kind: 'OperationDefinition',
+            operation: 'mutation',
+            name: { kind: 'Name', value: 'AisViewportReport' },
+            variableDefinitions: [
+                {
+                    kind: 'VariableDefinition',
+                    variable: { kind: 'Variable', name: { kind: 'Name', value: 'southLat' } },
+                    type: { kind: 'NonNullType', type: { kind: 'NamedType', name: { kind: 'Name', value: 'Float' } } },
+                },
+                {
+                    kind: 'VariableDefinition',
+                    variable: { kind: 'Variable', name: { kind: 'Name', value: 'westLon' } },
+                    type: { kind: 'NonNullType', type: { kind: 'NamedType', name: { kind: 'Name', value: 'Float' } } },
+                },
+                {
+                    kind: 'VariableDefinition',
+                    variable: { kind: 'Variable', name: { kind: 'Name', value: 'northLat' } },
+                    type: { kind: 'NonNullType', type: { kind: 'NamedType', name: { kind: 'Name', value: 'Float' } } },
+                },
+                {
+                    kind: 'VariableDefinition',
+                    variable: { kind: 'Variable', name: { kind: 'Name', value: 'eastLon' } },
+                    type: { kind: 'NonNullType', type: { kind: 'NamedType', name: { kind: 'Name', value: 'Float' } } },
+                },
+            ],
+            selectionSet: {
+                kind: 'SelectionSet',
+                selections: [
+                    {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'session' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'aisViewportReport' },
+                                    arguments: [
+                                        {
+                                            kind: 'Argument',
+                                            name: { kind: 'Name', value: 'southLat' },
+                                            value: { kind: 'Variable', name: { kind: 'Name', value: 'southLat' } },
+                                        },
+                                        {
+                                            kind: 'Argument',
+                                            name: { kind: 'Name', value: 'westLon' },
+                                            value: { kind: 'Variable', name: { kind: 'Name', value: 'westLon' } },
+                                        },
+                                        {
+                                            kind: 'Argument',
+                                            name: { kind: 'Name', value: 'northLat' },
+                                            value: { kind: 'Variable', name: { kind: 'Name', value: 'northLat' } },
+                                        },
+                                        {
+                                            kind: 'Argument',
+                                            name: { kind: 'Name', value: 'eastLon' },
+                                            value: { kind: 'Variable', name: { kind: 'Name', value: 'eastLon' } },
+                                        },
+                                    ],
+                                    selectionSet: {
+                                        kind: 'SelectionSet',
+                                        selections: [
+                                            { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'referenceId' } },
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+        },
+    ],
+} as unknown as DocumentNode<GqlCAisViewportReportMutation, GqlCAisViewportReportMutationVariables>;
+export const AisViewportClearDocument = {
+    kind: 'Document',
+    definitions: [
+        {
+            kind: 'OperationDefinition',
+            operation: 'mutation',
+            name: { kind: 'Name', value: 'AisViewportClear' },
+            selectionSet: {
+                kind: 'SelectionSet',
+                selections: [
+                    {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'session' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'aisViewportClear' },
+                                    selectionSet: {
+                                        kind: 'SelectionSet',
+                                        selections: [
+                                            { kind: 'Field', name: { kind: 'Name', value: 'success' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'referenceId' } },
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+        },
+    ],
+} as unknown as DocumentNode<GqlCAisViewportClearMutation, GqlCAisViewportClearMutationVariables>;
 export const SessionUpdatesDocument = {
     kind: 'Document',
     definitions: [

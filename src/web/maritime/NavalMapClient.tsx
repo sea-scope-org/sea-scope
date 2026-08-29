@@ -42,6 +42,7 @@ export interface NavalMapClientProps {
     selectedMmsi: string | null | undefined;
     focusRequest: NavalMapFocusRequest | null;
     onSelect: (mmsi: string) => void;
+    onViewportChange?: (bounds: { southLat: number; westLon: number; northLat: number; eastLon: number }) => void;
     className?: string;
 }
 
@@ -57,6 +58,7 @@ export function NavalMapClient({
     selectedMmsi,
     focusRequest,
     onSelect,
+    onViewportChange,
     className,
 }: NavalMapClientProps) {
     const mapRef = useRef<MapLibreMap | null>(null);
@@ -66,6 +68,8 @@ export function NavalMapClient({
     theaterRef.current = { centerLat, centerLon, zoom };
     const focusRequestRef = useRef(focusRequest);
     focusRequestRef.current = focusRequest;
+    const onViewportChangeRef = useRef(onViewportChange);
+    onViewportChangeRef.current = onViewportChange;
 
     const isMobile = useIsMobile();
     const [arrivalPulseMmsi, setArrivalPulseMmsi] = useState<string | null>(null);
@@ -145,15 +149,33 @@ export function NavalMapClient({
         [isMobile],
     );
 
+    const reportViewport = useCallback((map: MapLibreMap) => {
+        const report = onViewportChangeRef.current;
+        if (!report) return;
+        const bounds = map.getBounds();
+        report({
+            southLat: bounds.getSouth(),
+            westLon: bounds.getWest(),
+            northLat: bounds.getNorth(),
+            eastLon: bounds.getEast(),
+        });
+    }, []);
+
     const onMapLoad = useCallback(
         (event: { target: MapLibreMap }) => {
             mapRef.current = event.target;
             navalChartTintApply(event.target);
+            reportViewport(event.target);
             const pending = focusRequestRef.current;
             if (pending) applyFocusRequest(pending);
         },
-        [applyFocusRequest],
+        [applyFocusRequest, reportViewport],
     );
+
+    const onMoveEnd = useCallback(() => {
+        const map = mapRef.current;
+        if (map) reportViewport(map);
+    }, [reportViewport]);
 
     // Only generation changes should move the camera — never chase live AIS ticks.
     useEffect(() => {
@@ -179,6 +201,7 @@ export function NavalMapClient({
                 style={{ width: '100%', height: '100%' }}
                 attributionControl={false}
                 onLoad={onMapLoad}
+                onMoveEnd={onMoveEnd}
             >
                 <NavigationControl position="bottom-left" showCompass={false} />
 
@@ -210,9 +233,28 @@ export function NavalMapClient({
                             id="protected-assets-line"
                             type="line"
                             paint={{
-                                'line-color': '#1e179f',
-                                'line-width': 2.5,
+                                'line-color': ['match', ['get', 'type'], 'pipeline', '#9a3412', 'cable', '#1e179f', '#1e179f'],
+                                'line-width': ['match', ['get', 'type'], 'pipeline', 3, 2.5],
                                 'line-opacity': 0.9,
+                                'line-dasharray': ['match', ['get', 'type'], 'pipeline', ['literal', [1.5, 1.25]], ['literal', [1, 0]]],
+                            }}
+                        />
+                        <Layer
+                            id="protected-assets-label"
+                            type="symbol"
+                            minzoom={5}
+                            layout={{
+                                'symbol-placement': 'line',
+                                'text-field': ['get', 'name'],
+                                'text-size': 11,
+                                'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+                                'text-max-angle': 30,
+                                'text-padding': 12,
+                            }}
+                            paint={{
+                                'text-color': ['match', ['get', 'type'], 'pipeline', '#7c2d12', '#1e179f'],
+                                'text-halo-color': '#f5f0e8',
+                                'text-halo-width': 1.5,
                             }}
                         />
                     </Source>

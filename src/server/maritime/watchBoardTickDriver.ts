@@ -3,7 +3,6 @@ import { watchBoardLastTickAnomalies, watchBoardOverlayScenario, watchBoardSessi
 
 const REAL_TICK_MS = 1_000;
 let tickTimer: ReturnType<typeof setInterval> | null = null;
-let overlayScenario = watchBoardOverlayScenario();
 
 export function watchBoardTickDriverIsRunning(): boolean {
     return tickTimer !== null;
@@ -11,10 +10,11 @@ export function watchBoardTickDriverIsRunning(): boolean {
 
 export function watchBoardTickDriverStart(serverRuntime: ServerRuntime): void {
     if (tickTimer) return;
-    overlayScenario = watchBoardOverlayScenario();
 
     tickTimer = setInterval(() => {
         void (async () => {
+            // Resolve overlay each tick so Demo on/off swaps zones/cable immediately.
+            const overlayScenario = watchBoardOverlayScenario();
             const changed = watchBoardTick(overlayScenario);
             if (!changed && watchBoardSessionList().length === 0) return;
 

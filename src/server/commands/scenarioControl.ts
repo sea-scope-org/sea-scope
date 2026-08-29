@@ -3,6 +3,7 @@ import type { GqlSMutationResult, GqlSSession, GqlSSessionMutation, GqlSWatchSta
 import { toGqlWatchState } from '../mappers/toGqlWatch';
 import { mockScenarioSourceSetEnabled } from '../maritime/sources/mockScenarioSource';
 import {
+    watchBoardClearStickyState,
     watchBoardDataSources,
     watchBoardOverlayScenario,
     watchBoardSessionAcknowledgeAlert,
@@ -140,8 +141,11 @@ export async function mockAisSetEnabled(
 
         mockScenarioSourceSetEnabled(serverRuntime, args.enabled);
 
-        if (!args.enabled && selectedWasMock) {
-            watchBoardSessionSelectVessel(parent.sessionId, null);
+        if (!args.enabled) {
+            watchBoardClearStickyState();
+            if (selectedWasMock) {
+                watchBoardSessionSelectVessel(parent.sessionId, null);
+            }
         }
 
         for (const sessionId of watchBoardSessionList()) {
