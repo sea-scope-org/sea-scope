@@ -35,8 +35,9 @@ Traditional VTS answers “what is happening?” Global intel answers “what do
 ## User behavior
 
 1. Land on SeaScope home; open the watch console.
-2. Live AISStream traffic fills the map when a key is configured. Optionally enable the **Galaxy Leader** demo stream from the toolbar
-   (**Demo**) for dense curated AIS, kinematic anomalies, Cable C17, simulated radar mismatch, then AIS dark.
+2. Live AISStream traffic fills the map when a key is configured. Real undersea cables and pipelines (OpenStreetMap) overlay at true WGS84.
+   Optionally enable the **Galaxy Leader** demo stream from the toolbar (**Demo**) for dense curated AIS, kinematic anomalies, simulated
+   radar mismatch, then AIS dark.
 3. Vessels carry a live **0–100 risk score** (Green 0–29 / Yellow 30–59 / Orange 60–79 / Red 80–100). The sidebar **Needs attention** queue
    ranks Yellow+.
 4. On Red, SeaScope opens an incident timeline and requests operator acknowledgement.
@@ -59,8 +60,8 @@ Traditional VTS answers “what is happening?” Global intel answers “what do
 **Dual source fused board:** optional AISStream live ingest + opt-in Galaxy Leader mock feeder share one track store, risk engine, GraphQL
 `WatchState`, and Postgres tables tagged by `source`. Mock defaults off (`AIS_MOCK_ENABLED` / toolbar `mockAisSetEnabled`). Anonymous cookie
 sessions + `sessionUpdates` SSE. Chat remains under `Mutation.session` (silent Operator user for authorship FKs). No login/signup product
-surface. MapLibre chart kept (warm-tinted Carto Positron — bronze land / muted sea); risk styling and Cable C17 layered on top without
-geography rewrite.
+surface. MapLibre chart kept (warm-tinted Carto Positron — bronze land / muted sea); risk styling and real protected-infrastructure overlays
+(cables / pipelines) layered on top without geography rewrite.
 
 ## Out of scope (MVP)
 

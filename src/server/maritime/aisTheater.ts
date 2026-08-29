@@ -34,7 +34,9 @@ function latLonOffset(point: LatLon, offset: LatLon): LatLon {
     return { lat: point.lat + offset.lat, lon: point.lon + offset.lon };
 }
 
-/** Shift demo scenario geometry into the live AIS bounding box so both share one map. */
+/** Shift demo scenario geometry into the live AIS bounding box so both share one map.
+ * Scenario `protectedAssets` are still offset when authored relative to the mock origin.
+ * Real-world infrastructure from `protectedInfrastructureCatalog` must never be passed through here. */
 export function scenarioOffsetToBbox(scenario: ScenarioDefinition, bbox: EnvironmentVariables['aisStreamBoundingBox']): ScenarioDefinition {
     const offset = aisStreamBoundingBoxOffset(bbox);
     const center = aisStreamBoundingBoxCenter(bbox);

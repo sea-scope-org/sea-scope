@@ -18,7 +18,9 @@ Shared across sources:
 - `vesselTrackStore` — latest identity/position/track tail tagged by source; live wins on MMSI collision for 5 minutes.
 - Pure kinematic detectors (`kinematicsDetect`) that emit sticky `Anomaly` records.
 - A **rule-based risk engine** (`riskEngine`) over the fused vessel set.
-- Galaxy Leader overlays (Cable C17, zones, OSINT, simulated radar/EO) on the board.
+- **Real protected infrastructure** (`protectedInfrastructureCatalog`) — curated OSM cables/pipelines at true WGS84 (e.g. Nord Stream,
+  Gibraltar-region cables). Never passed through `scenarioOffsetToBbox`. Always on the board.
+- Galaxy Leader demo overlays (zones, OSINT, simulated radar/EO) **only while Demo is on**.
 - The LLM Copilot (`vesselIntelligenceRun`) **explains** structured risk evidence only.
 
 ### Persistence
@@ -61,6 +63,7 @@ the browser console. Heartbeats every 15s report message/position counts.
 | Mock feeder      | `src/server/maritime/sources/mockScenarioSource.ts`               |
 | AISStream ingest | `src/server/maritime/aisStreamIngest.ts`                          |
 | Fused board      | `src/server/maritime/watchBoardRuntime.ts`                        |
+| Infrastructure   | `src/server/maritime/infrastructure/` (OSM GeoJSON catalog)       |
 | Tick driver      | `src/server/maritime/watchBoardTickDriver.ts`                     |
 | Persist          | `src/server/commands/aisVesselPositionPersist.ts`                 |
 | Control          | `src/server/commands/scenarioControl.ts`                          |

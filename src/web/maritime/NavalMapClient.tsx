@@ -201,9 +201,28 @@ export function NavalMapClient({
                             id="protected-assets-line"
                             type="line"
                             paint={{
-                                'line-color': '#1e179f',
-                                'line-width': 2.5,
+                                'line-color': ['match', ['get', 'type'], 'pipeline', '#9a3412', 'cable', '#1e179f', '#1e179f'],
+                                'line-width': ['match', ['get', 'type'], 'pipeline', 3, 2.5],
                                 'line-opacity': 0.9,
+                                'line-dasharray': ['match', ['get', 'type'], 'pipeline', ['literal', [1.5, 1.25]], ['literal', [1, 0]]],
+                            }}
+                        />
+                        <Layer
+                            id="protected-assets-label"
+                            type="symbol"
+                            minzoom={5}
+                            layout={{
+                                'symbol-placement': 'line',
+                                'text-field': ['get', 'name'],
+                                'text-size': 11,
+                                'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+                                'text-max-angle': 30,
+                                'text-padding': 12,
+                            }}
+                            paint={{
+                                'text-color': ['match', ['get', 'type'], 'pipeline', '#7c2d12', '#1e179f'],
+                                'text-halo-color': '#f5f0e8',
+                                'text-halo-width': 1.5,
                             }}
                         />
                     </Source>
