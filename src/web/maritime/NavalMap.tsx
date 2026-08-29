@@ -27,6 +27,7 @@ export interface NavalMapProps {
     selectedMmsi: string | null | undefined;
     focusRequest: NavalMapFocusRequest | null;
     onSelect: (mmsi: string) => void;
+    onViewportChange?: (bounds: { southLat: number; westLon: number; northLat: number; eastLon: number }) => void;
     className?: string;
 }
 

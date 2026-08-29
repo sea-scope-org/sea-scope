@@ -40,6 +40,7 @@ export interface NavalMapClientProps {
     selectedMmsi: string | null | undefined;
     focusRequest: NavalMapFocusRequest | null;
     onSelect: (mmsi: string) => void;
+    onViewportChange?: (bounds: { southLat: number; westLon: number; northLat: number; eastLon: number }) => void;
     className?: string;
 }
 
@@ -74,6 +75,7 @@ export function NavalMapClient({
     selectedMmsi,
     focusRequest,
     onSelect,
+    onViewportChange,
     className,
 }: NavalMapClientProps) {
     const mapRef = useRef<MapLibreMap | null>(null);
@@ -83,6 +85,8 @@ export function NavalMapClient({
     theaterRef.current = { centerLat, centerLon, zoom };
     const focusRequestRef = useRef(focusRequest);
     focusRequestRef.current = focusRequest;
+    const onViewportChangeRef = useRef(onViewportChange);
+    onViewportChangeRef.current = onViewportChange;
 
     const isMobile = useIsMobile();
     const [arrivalPulseMmsi, setArrivalPulseMmsi] = useState<string | null>(null);
@@ -136,15 +140,33 @@ export function NavalMapClient({
         [isMobile],
     );
 
+    const reportViewport = useCallback((map: MapLibreMap) => {
+        const report = onViewportChangeRef.current;
+        if (!report) return;
+        const bounds = map.getBounds();
+        report({
+            southLat: bounds.getSouth(),
+            westLon: bounds.getWest(),
+            northLat: bounds.getNorth(),
+            eastLon: bounds.getEast(),
+        });
+    }, []);
+
     const onMapLoad = useCallback(
         (event: { target: MapLibreMap }) => {
             mapRef.current = event.target;
             navalChartTintApply(event.target);
+            reportViewport(event.target);
             const pending = focusRequestRef.current;
             if (pending) applyFocusRequest(pending);
         },
-        [applyFocusRequest],
+        [applyFocusRequest, reportViewport],
     );
+
+    const onMoveEnd = useCallback(() => {
+        const map = mapRef.current;
+        if (map) reportViewport(map);
+    }, [reportViewport]);
 
     // Only generation changes should move the camera — never chase live AIS ticks.
     useEffect(() => {
@@ -170,6 +192,7 @@ export function NavalMapClient({
                 style={{ width: '100%', height: '100%' }}
                 attributionControl={false}
                 onLoad={onMapLoad}
+                onMoveEnd={onMoveEnd}
             >
                 <NavigationControl position="bottom-left" showCompass={false} />
 

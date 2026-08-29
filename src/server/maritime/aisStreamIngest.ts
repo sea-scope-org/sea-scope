@@ -4,6 +4,8 @@ import { aisVesselPositionPersist } from '../commands/aisVesselPositionPersist';
 import type { ServerRuntime } from '../domain/ServerRuntime';
 import type { EnvironmentVariables } from '../env/EnvironmentVariables';
 import { aisStreamMessageParse } from './aisStreamMessageParse';
+import { aisViewportRegistryActiveBoxes, aisViewportRegistryCount, aisViewportRegistryPrune } from './aisViewportRegistry';
+import type { AisViewportBbox } from './aisViewportRegistry';
 import {
     vesselTrackStoreCountBySource,
     vesselTrackStoreMarkPersisted,
@@ -16,18 +18,24 @@ const HISTORY_PERSIST_MIN_MS = 60_000;
 const RECONNECT_BASE_MS = 1_000;
 const RECONNECT_MAX_MS = 60_000;
 const HEARTBEAT_MS = 15_000;
+/** AISStream closes the connection if subscription updates exceed 1/s. */
+const RESUBSCRIBE_MIN_INTERVAL_MS = 1_000;
 
 let started = false;
 let socket: WebSocket | null = null;
 let reconnectAttempt = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+let resubscribeTimer: ReturnType<typeof setTimeout> | null = null;
 let stopped = false;
 let status: 'connected' | 'connecting' | 'disconnected' | 'disabled' | 'error' = 'disabled';
 let firstPositionLogged = false;
 let messagesReceived = 0;
 let positionsAccepted = 0;
 let messagesIgnored = 0;
+let activeEnv: EnvironmentVariables | null = null;
+let lastSubscribeAtMs = 0;
+let pendingResubscribe = false;
 
 export function aisStreamIngestStatus(): typeof status {
     return status;
@@ -40,19 +48,71 @@ export function aisStreamIngestStatusDetail(): string {
     if (status === 'disconnected') return 'disconnected';
     if (status === 'error') return 'error';
     const vessels = vesselTrackStoreCountBySource('aisstream');
+    const viewports = aisViewportRegistryCount();
+    const viewportSuffix = viewports > 0 ? ` · ${viewports} viewport${viewports === 1 ? '' : 's'}` : '';
     if (positionsAccepted === 0) {
-        return `connected · waiting for traffic (${messagesReceived} msgs)`;
+        return `connected · waiting for traffic (${messagesReceived} msgs)${viewportSuffix}`;
     }
-    return `connected · ${vessels} vessels · ${positionsAccepted} fixes`;
+    return `connected · ${vessels} vessels · ${positionsAccepted} fixes${viewportSuffix}`;
 }
 
-function boundingBoxesFromEnv(bbox: EnvironmentVariables['aisStreamBoundingBox']): number[][][] {
-    return [
-        [
-            [bbox.northLat, bbox.westLon],
-            [bbox.southLat, bbox.eastLon],
-        ],
+/** AISStream corner pairs: NW then SE. Env box first, then active viewports. */
+export function aisStreamBoundingBoxesAssemble(
+    envBbox: EnvironmentVariables['aisStreamBoundingBox'],
+    viewports: ReadonlyArray<AisViewportBbox> = aisViewportRegistryActiveBoxes(),
+): number[][][] {
+    const toCorners = (bbox: AisViewportBbox): number[][] => [
+        [bbox.northLat, bbox.westLon],
+        [bbox.southLat, bbox.eastLon],
     ];
+    return [toCorners(envBbox), ...viewports.map(toCorners)];
+}
+
+function subscriptionPayload(env: EnvironmentVariables): string {
+    aisViewportRegistryPrune();
+    return JSON.stringify({
+        APIKey: env.aisStreamApiKey,
+        BoundingBoxes: aisStreamBoundingBoxesAssemble(env.aisStreamBoundingBox),
+        FilterMessageTypes: ['PositionReport', 'StandardClassBPositionReport', 'ExtendedClassBPositionReport', 'ShipStaticData'],
+    });
+}
+
+function sendSubscription(env: EnvironmentVariables): void {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    socket.send(subscriptionPayload(env));
+    lastSubscribeAtMs = Date.now();
+    const boxes = aisStreamBoundingBoxesAssemble(env.aisStreamBoundingBox);
+    console.info(`[aisstream] subscription sent (${boxes.length} box${boxes.length === 1 ? '' : 'es'})`);
+}
+
+/**
+ * Replace the AISStream subscription with env bbox + union of watch viewports.
+ * Coalesces to ≤1 update/sec (AISStream hard limit).
+ */
+export function aisStreamIngestResubscribe(): void {
+    if (!started || !activeEnv?.aisStreamApiKey) return;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+    const now = Date.now();
+    const elapsed = lastSubscribeAtMs === 0 ? RESUBSCRIBE_MIN_INTERVAL_MS : now - lastSubscribeAtMs;
+    if (elapsed >= RESUBSCRIBE_MIN_INTERVAL_MS) {
+        pendingResubscribe = false;
+        if (resubscribeTimer) {
+            clearTimeout(resubscribeTimer);
+            resubscribeTimer = null;
+        }
+        sendSubscription(activeEnv);
+        return;
+    }
+
+    pendingResubscribe = true;
+    if (resubscribeTimer) return;
+    resubscribeTimer = setTimeout(() => {
+        resubscribeTimer = null;
+        if (!pendingResubscribe || !activeEnv) return;
+        pendingResubscribe = false;
+        sendSubscription(activeEnv);
+    }, RESUBSCRIBE_MIN_INTERVAL_MS - elapsed);
 }
 
 function clearHeartbeat(): void {
@@ -65,8 +125,10 @@ function clearHeartbeat(): void {
 function startHeartbeat(): void {
     clearHeartbeat();
     heartbeatTimer = setInterval(() => {
+        const pruned = aisViewportRegistryPrune();
+        if (pruned) aisStreamIngestResubscribe();
         console.info(
-            `[aisstream] heartbeat status=${status} msgs=${messagesReceived} positions=${positionsAccepted} ignored=${messagesIgnored} vessels=${vesselTrackStoreCountBySource('aisstream')}`,
+            `[aisstream] heartbeat status=${status} msgs=${messagesReceived} positions=${positionsAccepted} ignored=${messagesIgnored} vessels=${vesselTrackStoreCountBySource('aisstream')} viewports=${aisViewportRegistryCount()}`,
         );
     }, HEARTBEAT_MS);
 }
@@ -94,14 +156,13 @@ function connect(serverRuntime: ServerRuntime, env: EnvironmentVariables): void 
 
     socket.on('open', () => {
         reconnectAttempt = 0;
-        const subscription = {
-            APIKey: apiKey,
-            BoundingBoxes: boundingBoxesFromEnv(env.aisStreamBoundingBox),
-            FilterMessageTypes: ['PositionReport', 'StandardClassBPositionReport', 'ExtendedClassBPositionReport', 'ShipStaticData'],
-        };
-        socket?.send(JSON.stringify(subscription));
+        sendSubscription(env);
         status = 'connected';
-        const bboxMsg = `bbox ${env.aisStreamBoundingBox.southLat},${env.aisStreamBoundingBox.westLon} → ${env.aisStreamBoundingBox.northLat},${env.aisStreamBoundingBox.eastLon}`;
+        const bbox = env.aisStreamBoundingBox;
+        const viewports = aisViewportRegistryCount();
+        const bboxMsg =
+            `env ${bbox.southLat},${bbox.westLon} → ${bbox.northLat},${bbox.eastLon}` +
+            (viewports > 0 ? ` + ${viewports} viewport(s)` : '');
         console.info(`[aisstream] WebSocket connected (${bboxMsg})`);
         console.info(
             '[aisstream] note: free AISStream is coastal terrestrial only — quiet bboxes (e.g. open Red Sea) may get zero traffic',
@@ -186,6 +247,7 @@ function connect(serverRuntime: ServerRuntime, env: EnvironmentVariables): void 
 
 /** Start the process-global AISStream ingest when an API key is configured. Idempotent. */
 export function aisStreamIngestEnsureStarted(serverRuntime: ServerRuntime, env: EnvironmentVariables): void {
+    activeEnv = env;
     if (!env.aisStreamApiKey) {
         status = 'disabled';
         console.info('[aisstream] ingest skipped (AISSTREAM_API_KEY unset)');

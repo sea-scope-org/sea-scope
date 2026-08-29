@@ -7,11 +7,12 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 1. From the home page, **Open console / demo** navigates to `/watch`.
 2. The page is full-viewport, `noindex`, and not in the sitemap. Shell chrome follows the light brand tokens; the MapLibre chart uses Carto
    Positron retinted to warm bronze land and muted sea (see [`theme.md`](../styles/theme.md)).
-3. The fused watch board is live on load with **live AISStream** positions when `AISSTREAM_API_KEY` is set. The **Galaxy Leader demo**
-   stream is **off by default** — enable it with the toolbar **Demo** button (`mockAisSetEnabled`). Real undersea cables and pipelines
-   (OpenStreetMap, true WGS84) stay on the chart either way. While Demo is off, high-risk zones, simulated radar, and theater OSINT are
-   hidden so live traffic is not scored against demo-only geometry. Toolbar badges show live (and demo, when on) vessel counts. **Reset**
-   clears selection / risk stickies for the session.
+3. The fused watch board is live on load with **live AISStream** positions when `AISSTREAM_API_KEY` is set (always the configured
+   `AISSTREAM_BBOX`, plus any connected operators’ chart viewports under 5° via `aisViewportReport`). The **Galaxy Leader demo** stream is
+   **off by default** — enable it with the toolbar **Demo** button (`mockAisSetEnabled`). Real undersea cables and pipelines (OpenStreetMap,
+   true WGS84) stay on the chart either way. While Demo is off, high-risk zones, simulated radar, and theater OSINT are hidden so live
+   traffic is not scored against demo-only geometry. Toolbar badges show live (and demo, when on) vessel counts. **Reset** clears selection
+   / risk stickies for the session.
 4. Toolbar **Filters** toggles chart layers (protected assets, high-risk zones, track tails, radar contacts) and vessel `shipType`s. Filters
    are client-only and shared by the chart, Queue, and toolbar band counts (all on by default; **Show all** resets). A vessel already in
    **Case** stays on the map if its type is unchecked; Queue still hides unchecked types.
@@ -51,6 +52,8 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 | Pan on every selection incl. map click     | Consistent camera                  | Yanks when the vessel is already under the cursor                 |
 | Continuous vessel tracking                 | Always framed                      | Steals operator agency during live AIS                            |
 | Auto-focus when Red opens                  | Demo drama                         | Steals focus mid-triage                                           |
+| Viewport AIS union + 5° hard skip (chosen) | Live ships follow the chart        | Shared feed; zoomed-out maps stay on env bbox only                |
+| Planet-wide AISStream box                  | “See everything”                   | Overwhelm + sparse free coverage                                  |
 
 ## Option chosen
 
@@ -59,26 +62,27 @@ Always-live fused board (optional AISStream + opt-in Galaxy Leader mock) via `sc
 with `navalChartTintApply` (bronze land `#c4a882`, muted sea `#8fa3ab`). Client-only MapLibre mount so SSR does not load GL. Mock feeder
 defaults off; toolbar **Demo** calls `mockAisSetEnabled`. Mock loops on completion; `scenarioReset` clears fused board session state. Chart
 focus is sidebar-driven (`navalMapFocus.ts`): Queue / auto-select / Locate ease the camera; map clicks do not; live ticks never chase.
+Debounced `aisViewportReport` unions each session’s ≤5° viewport into the shared AISStream subscription alongside `AISSTREAM_BBOX`.
 
 Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory player + risk engine:
 [`maritime-watch.md`](../architecture/maritime-watch.md).
 
 ## Implementation
 
-| Piece              | Path                                                                                                                                                                          |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Route + SEO        | `src/routes/watch.tsx`                                                                                                                                                        |
-| Operations         | `src/routes/WatchPage.graphql`                                                                                                                                                |
-| Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                                                                       |
-| Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts` + `navalMapFocus.ts`                                                                             |
-| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (risk bands, alerts, Demo toggle, Filters)                                                                                                |
-| Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (layers + ship types; owned in `watch.tsx`)                                                                       |
-| Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail)                                                    |
-| Shared rail bits   | `src/web/maritime/watchSidebarShared.tsx`                                                                                                                                     |
-| Layout shell       | `SidebarProvider` + `SidebarInset` in `watch.tsx`                                                                                                                             |
-| Server watch board | `src/server/maritime/*`, session mutations in schema                                                                                                                          |
-| Protected assets   | `src/server/maritime/infrastructure/` — curated OSM GeoJSON (Nord Stream, Gibraltar-region cables); never theater-offset                                                      |
-| Multi-source AIS   | `vesselTrackStore.ts`, `sources/mockScenarioSource.ts`, `aisStreamIngest.ts`, `watchBoardRuntime.ts`, `aisTheater.ts` (water-corridor map); tables `Vessels` / `AisPositions` |
+| Piece              | Path                                                                                                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Route + SEO        | `src/routes/watch.tsx`                                                                                                                                                                                  |
+| Operations         | `src/routes/WatchPage.graphql`                                                                                                                                                                          |
+| Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                                                                                                 |
+| Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts` + `navalMapFocus.ts`                                                                                                       |
+| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (risk bands, alerts, Demo toggle, Filters)                                                                                                                          |
+| Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (layers + ship types; owned in `watch.tsx`)                                                                                                 |
+| Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail)                                                                              |
+| Shared rail bits   | `src/web/maritime/watchSidebarShared.tsx`                                                                                                                                                               |
+| Layout shell       | `SidebarProvider` + `SidebarInset` in `watch.tsx`                                                                                                                                                       |
+| Server watch board | `src/server/maritime/*`, session mutations in schema                                                                                                                                                    |
+| Protected assets   | `src/server/maritime/infrastructure/` — curated OSM GeoJSON (Nord Stream, Gibraltar-region cables); never theater-offset                                                                                |
+| Multi-source AIS   | `vesselTrackStore.ts`, `sources/mockScenarioSource.ts`, `aisStreamIngest.ts`, `aisViewportRegistry.ts`, `watchBoardRuntime.ts`, `aisTheater.ts` (water-corridor map); tables `Vessels` / `AisPositions` |
 
 Basemap: Carto Positron (`basemaps.cartocdn.com/gl/positron-gl-style`) + warm chart tint on load. Scenario id: `galaxy-leader`. Protected
 asset geometries © OpenStreetMap contributors (ODbL); approximate public mapping, not operator as-built plans.

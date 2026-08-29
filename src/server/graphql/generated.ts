@@ -501,6 +501,13 @@ export type GqlSSessionChatArgs = {
 
 export interface GqlSSessionMutation {
     __typename?: 'SessionMutation';
+    /** Drop this session’s viewport contribution from the AISStream union. */
+    aisViewportClear: GqlSMutationResult;
+    /**
+     * Report the watch chart viewport so AISStream can union it into the live
+     * subscription (alongside AISSTREAM_BBOX). Spans over 5° are hard-skipped.
+     */
+    aisViewportReport: GqlSMutationResult;
     alertAcknowledge?: Maybe<GqlSWatchState>;
     chatInputCollectionRespond?: Maybe<GqlSChatMessageCreateResult>;
     chatMessageCreate?: Maybe<GqlSChatMessageCreateResult>;
@@ -511,6 +518,13 @@ export interface GqlSSessionMutation {
     vesselIntelligenceRequest: GqlSMutationResult;
     vesselSelect?: Maybe<GqlSWatchState>;
 }
+
+export type GqlSSessionMutationAisViewportReportArgs = {
+    eastLon: Scalars['Float']['input'];
+    northLat: Scalars['Float']['input'];
+    southLat: Scalars['Float']['input'];
+    westLon: Scalars['Float']['input'];
+};
 
 export type GqlSSessionMutationAlertAcknowledgeArgs = {
     incidentId: Scalars['ID']['input'];
@@ -1686,6 +1700,13 @@ export type GqlSSessionMutationResolvers<
     ContextType = any,
     ParentType extends GqlSResolversParentTypes['SessionMutation'] = GqlSResolversParentTypes['SessionMutation'],
 > = ResolversObject<{
+    aisViewportClear?: Resolver<GqlSResolversTypes['MutationResult'], ParentType, ContextType>;
+    aisViewportReport?: Resolver<
+        GqlSResolversTypes['MutationResult'],
+        ParentType,
+        ContextType,
+        RequireFields<GqlSSessionMutationAisViewportReportArgs, 'eastLon' | 'northLat' | 'southLat' | 'westLon'>
+    >;
     alertAcknowledge?: Resolver<
         Maybe<GqlSResolversTypes['WatchState']>,
         ParentType,
