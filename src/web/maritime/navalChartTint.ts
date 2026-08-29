@@ -5,13 +5,13 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
  * Carto Positron so the watch board matches the light brand without a hosted
  * custom style.
  */
-export const CHART_LAND = '#c4a882';
-export const CHART_LAND_SOFT = '#d2bc9a';
-export const CHART_WATER = '#8fa3ab';
-export const CHART_INK = '#3d3429';
-export const CHART_MUTED = '#6a5f50';
-export const CHART_WATER_INK = '#4a5c64';
-export const CHART_HALO = 'rgba(244, 243, 236, 0.65)';
+const CHART_LAND = '#c4a882';
+const CHART_LAND_SOFT = '#d2bc9a';
+const CHART_WATER = '#8fa3ab';
+const CHART_INK = '#3d3429';
+const CHART_MUTED = '#6a5f50';
+const CHART_WATER_INK = '#4a5c64';
+const CHART_HALO = 'rgba(244, 243, 236, 0.65)';
 
 type PaintSet = ReadonlyArray<readonly [string, string, unknown]>;
 
