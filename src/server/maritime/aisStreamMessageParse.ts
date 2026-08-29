@@ -69,6 +69,19 @@ function shipTypeLabel(typeCode: number | undefined): string {
     return `Type ${typeCode}`;
 }
 
+function parseAisStreamTimeUtc(raw: string | undefined): string {
+    if (!raw?.trim()) return new Date().toISOString();
+    // AISStream emits e.g. "2026-08-29 10:09:06.964647395 +0000 UTC"
+    const normalized = raw
+        .trim()
+        .replace(' +0000 UTC', 'Z')
+        .replace(/^(\d{4}-\d{2}-\d{2}) /, '$1T')
+        .replace(/(\.\d{3})\d+/, '$1');
+    const parsed = new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) return new Date().toISOString();
+    return parsed.toISOString();
+}
+
 function midToFlag(mmsi: string): string {
     // MID (first 3 digits) → coarse flag label; full ITU table is out of scope.
     const mid = mmsi.slice(0, 3);
@@ -150,7 +163,7 @@ export function aisStreamMessageParse(raw: unknown): AisStreamParsed {
         const heading = headingRaw >= 360 ? (body.Cog ?? 0) : headingRaw;
         const sog = body.Sog ?? 0;
         const cog = body.Cog ?? 0;
-        const timestamp = meta.time_utc ? new Date(meta.time_utc).toISOString() : new Date().toISOString();
+        const timestamp = parseAisStreamTimeUtc(meta.time_utc);
 
         const identity: VesselIdentity = {
             mmsi,

@@ -25,6 +25,7 @@
         "manoeuvrability",
         "permessage",
         "SART",
+        "SAFEEN",
         "Applebot",
         "artefacts",
         "ATLANTICO",
@@ -33,6 +34,7 @@
         "Bab",
         "Basemap",
         "basemaps",
+        "bboxes",
         "behaviour",
         "behavioural",
         "behaviours",
@@ -216,7 +218,9 @@
         "wonka",
         "wordmark",
         "worktree",
-        "zodv"
+        "zodv",
+        "Δlat",
+        "Δlon"
     ],
     // https://cspell.org/docs/dictionaries/
     "dictionaries": ["typescript", "node", "html", "css", "de-de"]

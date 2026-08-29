@@ -11,6 +11,7 @@ export interface IntelligenceSidebarProps {
     intelligenceBusy: boolean;
     onRequestIntelligence: (mmsi: string) => void;
     onSelectVessel: (mmsi: string) => void;
+    onLocateOnChart: () => void;
     onAcknowledgeAlert: (incidentId: string) => void;
     onClearSelection: () => void;
     visibleShipTypes?: ReadonlySet<string>;
@@ -23,6 +24,7 @@ export function IntelligenceSidebar({
     intelligenceBusy,
     onRequestIntelligence,
     onSelectVessel,
+    onLocateOnChart,
     onAcknowledgeAlert,
     onClearSelection,
     visibleShipTypes,
@@ -53,6 +55,7 @@ export function IntelligenceSidebar({
                         intelligence={intelligence}
                         intelligenceBusy={intelligenceBusy}
                         onRequestIntelligence={onRequestIntelligence}
+                        onLocateOnChart={onLocateOnChart}
                         onAcknowledgeAlert={onAcknowledgeAlert}
                     />
                 ) : watch ? (

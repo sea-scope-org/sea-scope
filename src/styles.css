@@ -153,12 +153,21 @@
     }
 }
 
-/* Honour the user's OS-level reduce-motion preference. The navigation progress
- * bar is the only animation defined here, and it is applied through Tailwind's
- * arbitrary `animate-[nav-progress-grow_…]` utility — hence the substring
- * match rather than a named class. */
+/* One-shot chart focus arrival — opacity only; answers “here it is.” */
+@keyframes naval-map-arrival-ring {
+    0% {
+        opacity: 0.9;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+/* Honour the user's OS-level reduce-motion preference. Arbitrary Tailwind
+ * `animate-[…]` utilities are matched by substring. */
 @media (prefers-reduced-motion: reduce) {
-    [class*='nav-progress-grow'] {
+    [class*='nav-progress-grow'],
+    [class*='naval-map-arrival-ring'] {
         animation: none;
     }
 }

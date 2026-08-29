@@ -1,4 +1,4 @@
-import { ChevronDownIcon } from 'lucide-react';
+import { ChevronDownIcon, LocateFixedIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '../components/base/badge';
 import { Button } from '../components/base/button';
@@ -16,10 +16,19 @@ export interface WatchCaseProps {
     intelligence: GqlCVesselIntelligence | null;
     intelligenceBusy: boolean;
     onRequestIntelligence: (mmsi: string) => void;
+    onLocateOnChart: () => void;
     onAcknowledgeAlert: (incidentId: string) => void;
 }
 
-export function WatchCase({ watch, vessel, intelligence, intelligenceBusy, onRequestIntelligence, onAcknowledgeAlert }: WatchCaseProps) {
+export function WatchCase({
+    watch,
+    vessel,
+    intelligence,
+    intelligenceBusy,
+    onRequestIntelligence,
+    onLocateOnChart,
+    onAcknowledgeAlert,
+}: WatchCaseProps) {
     const assetsById = new Map(watch.protectedAssets.map((a) => [a.assetId, a]));
     const asset = assetName(vessel, assetsById);
     const vesselAnomalies = watch.anomalies.filter((a) => a.mmsi === vessel.mmsi);
@@ -105,6 +114,10 @@ export function WatchCase({ watch, vessel, intelligence, intelligenceBusy, onReq
                             Acknowledge
                         </Button>
                     ) : null}
+                    <Button type="button" size="xs" variant="outline" onClick={onLocateOnChart}>
+                        <LocateFixedIcon data-icon="inline-start" aria-hidden />
+                        Locate on chart
+                    </Button>
                     <Button
                         type="button"
                         size="xs"

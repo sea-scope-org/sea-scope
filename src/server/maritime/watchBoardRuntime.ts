@@ -1,4 +1,6 @@
-import { aisStreamIngestIsStarted, aisStreamIngestStatus } from './aisStreamIngest';
+import { environmentVariables } from '../env/environmentVariablesCreate';
+import { aisStreamIngestIsStarted, aisStreamIngestStatus, aisStreamIngestStatusDetail } from './aisStreamIngest';
+import { scenarioOffsetToBbox } from './aisTheater';
 import { aisGapDetect, kinematicsDetect, pointInPolygon } from './kinematicsDetect';
 import { RISK_BASELINE, riskCompute, riskLevelFromScore, stickyKindsFromAnomalies } from './riskEngine';
 import { DEFAULT_SCENARIO_ID, scenarioDefinitionGet } from './scenarioRuntime';
@@ -56,11 +58,12 @@ function boardEnsure(): WatchBoard {
 export function watchBoardOverlayScenario(): ScenarioDefinition {
     const scenario = scenarioDefinitionGet(DEFAULT_SCENARIO_ID);
     if (!scenario) throw new Error('Galaxy Leader scenario missing');
+    const shifted = scenarioOffsetToBbox(scenario, environmentVariables.aisStreamBoundingBox);
     return {
-        ...scenario,
+        ...shifted,
         title: 'SeaScope watch — live + demo',
         description:
-            'Fused watch board: Galaxy Leader mock incident tracks stream alongside live AISStream positions in the same theater. Cable C17, zones, and OSINT come from the demo scenario.',
+            'Fused watch board: Galaxy Leader mock incident tracks (shifted into the live AIS bounding box) stream alongside AISStream positions. Cable C17, zones, and OSINT come from the demo scenario.',
     };
 }
 
@@ -117,7 +120,7 @@ export function watchBoardDataSources(): WatchDataSourceStatus[] {
         {
             id: 'aisstream',
             enabled: aisStreamIngestIsStarted() || aisStreamIngestStatus() !== 'disabled',
-            status: aisStreamIngestStatus(),
+            status: aisStreamIngestStatusDetail(),
             vesselCount: vesselTrackStoreCountBySource('aisstream'),
         },
     ];

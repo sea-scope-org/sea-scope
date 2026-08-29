@@ -1,11 +1,21 @@
 import { setWorkerUrl } from 'maplibre-gl';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Map, { Layer, Marker, NavigationControl, Source } from 'react-map-gl/maplibre';
 import type { GqlCWatchFieldsFragment } from '../graphql/generated';
+import { useIsMobile } from '../hooks/use-mobile';
 import { cn } from '../utils/cn';
 import { navalChartTintApply } from './navalChartTint';
+import {
+    NAVAL_MAP_FOCUS_DURATION_MS,
+    navalMapCaseZoom,
+    navalMapFocusApply,
+    navalMapFocusNeeded,
+    navalMapFocusPadding,
+    navalMapFocusPrefersReducedMotion,
+} from './navalMapFocus';
+import type { NavalMapFocusRequest } from './navalMapFocus';
 import type { WatchLayerFilters } from './watchFilterState';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -28,6 +38,7 @@ export interface NavalMapClientProps {
     protectedAssets: ReadonlyArray<ProtectedAsset>;
     layers: WatchLayerFilters;
     selectedMmsi: string | null | undefined;
+    focusRequest: NavalMapFocusRequest | null;
     onSelect: (mmsi: string) => void;
     className?: string;
 }
@@ -61,16 +72,91 @@ export function NavalMapClient({
     protectedAssets,
     layers,
     selectedMmsi,
+    focusRequest,
     onSelect,
     className,
 }: NavalMapClientProps) {
+    const mapRef = useRef<MapLibreMap | null>(null);
+    const vesselsRef = useRef(vessels);
+    vesselsRef.current = vessels;
+    const theaterRef = useRef({ centerLat, centerLon, zoom });
+    theaterRef.current = { centerLat, centerLon, zoom };
+    const focusRequestRef = useRef(focusRequest);
+    focusRequestRef.current = focusRequest;
+
+    const isMobile = useIsMobile();
+    const [arrivalPulseMmsi, setArrivalPulseMmsi] = useState<string | null>(null);
+
     const zoneGeoJson = useMemo(() => zonesToGeoJson(highRiskZones), [highRiskZones]);
     const assetGeoJson = useMemo(() => assetsToGeoJson(protectedAssets), [protectedAssets]);
     const trackGeoJson = useMemo(() => tracksToGeoJson(vessels), [vessels]);
 
-    const onMapLoad = useCallback((event: { target: MapLibreMap }) => {
-        navalChartTintApply(event.target);
-    }, []);
+    const applyFocusRequest = useCallback(
+        (request: NavalMapFocusRequest) => {
+            const map = mapRef.current;
+            if (!map) return;
+
+            const padding = navalMapFocusPadding(isMobile);
+            const reducedMotion = navalMapFocusPrefersReducedMotion();
+            const theater = theaterRef.current;
+
+            if (request.mmsi === null) {
+                if (!navalMapFocusNeeded(map, { lon: theater.centerLon, lat: theater.centerLat, zoom: theater.zoom }, padding)) {
+                    return;
+                }
+                navalMapFocusApply(map, {
+                    lon: theater.centerLon,
+                    lat: theater.centerLat,
+                    zoom: theater.zoom,
+                    padding,
+                    reducedMotion,
+                });
+                return;
+            }
+
+            const vessel = vesselsRef.current.find((v) => v.mmsi === request.mmsi);
+            const position = vessel?.position;
+            if (!position) return;
+
+            const targetZoom = navalMapCaseZoom(theater.zoom, map.getZoom());
+            if (navalMapFocusNeeded(map, { lon: position.lon, lat: position.lat, zoom: targetZoom }, padding)) {
+                navalMapFocusApply(map, {
+                    lon: position.lon,
+                    lat: position.lat,
+                    zoom: targetZoom,
+                    padding,
+                    reducedMotion,
+                });
+            }
+
+            if (request.arrivalPulse) {
+                setArrivalPulseMmsi(request.mmsi);
+            }
+        },
+        [isMobile],
+    );
+
+    const onMapLoad = useCallback(
+        (event: { target: MapLibreMap }) => {
+            mapRef.current = event.target;
+            navalChartTintApply(event.target);
+            const pending = focusRequestRef.current;
+            if (pending) applyFocusRequest(pending);
+        },
+        [applyFocusRequest],
+    );
+
+    // Only generation changes should move the camera — never chase live AIS ticks.
+    useEffect(() => {
+        if (!focusRequest) return;
+        applyFocusRequest(focusRequest);
+    }, [applyFocusRequest, focusRequest]);
+
+    useEffect(() => {
+        if (!arrivalPulseMmsi) return;
+        const timer = window.setTimeout(() => setArrivalPulseMmsi(null), NAVAL_MAP_FOCUS_DURATION_MS);
+        return () => window.clearTimeout(timer);
+    }, [arrivalPulseMmsi, focusRequest?.generation]);
 
     return (
         <div className={cn('relative size-full', className)}>
@@ -151,6 +237,7 @@ export function NavalMapClient({
                     const position = vessel.position;
                     if (!position) return null;
                     const selected = vessel.mmsi === selectedMmsi;
+                    const arrivalPulse = vessel.mmsi === arrivalPulseMmsi;
                     const heading = position.heading;
                     const style = RISK_MARKER[vessel.riskLevel];
                     const topReason = vessel.activeFactors[vessel.activeFactors.length - 1]?.explanation;
@@ -173,20 +260,23 @@ export function NavalMapClient({
                                 type="button"
                                 title={title}
                                 aria-label={`${vessel.name}, risk ${vessel.riskScore}`}
+                                aria-current={selected ? 'true' : undefined}
                                 className="relative flex size-8 cursor-pointer items-center justify-center border-0 bg-transparent p-0 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                                 style={{ transform: `rotate(${heading}deg)` }}
                             >
+                                {selected ? (
+                                    <span className="absolute size-8 rounded-full border-2 border-primary/70 bg-primary/10" aria-hidden />
+                                ) : null}
+                                {arrivalPulse ? (
+                                    <span
+                                        className="absolute size-9 rounded-full border-2 border-primary animate-[naval-map-arrival-ring_400ms_ease-out_forwards] motion-reduce:animate-none"
+                                        aria-hidden
+                                    />
+                                ) : null}
                                 {vessel.riskLevel === 'red' || vessel.aisDark ? (
                                     <span className="absolute size-7 rounded-full border border-red-500/60" aria-hidden />
                                 ) : null}
-                                <span
-                                    className={cn(
-                                        'block size-0 border-x-transparent transition-colors',
-                                        style.size,
-                                        style.border,
-                                        selected && vessel.riskLevel === 'green' && 'border-b-primary',
-                                    )}
-                                />
+                                <span className={cn('relative z-10 block size-0 border-x-transparent', style.size, style.border)} />
                             </button>
                         </Marker>
                     );

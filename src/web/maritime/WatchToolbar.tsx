@@ -86,9 +86,12 @@ export function WatchToolbar({ watch, countedVessels, filters, shipTypeCatalog, 
                                     <Badge
                                         variant="outline"
                                         className="rounded-sm px-1.5 py-0 text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
-                                        title={`${source.id}: ${source.status}`}
+                                        title={source.status}
                                     >
                                         {source.id === 'aisstream' ? 'live' : 'demo'} {source.vesselCount}
+                                        {source.id === 'aisstream' && source.vesselCount === 0 && source.status.includes('waiting')
+                                            ? '…'
+                                            : ''}
                                     </Badge>
                                 </li>
                             ))}

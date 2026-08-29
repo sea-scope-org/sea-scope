@@ -15,15 +15,19 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
    vessel already in **Case** stays on the map if its type is unchecked; Queue still hides unchecked types.
 5. Vessels appear on the chart colored by risk band; track tails and Cable C17 are drawn; selecting one opens **Case** mode in the right
    rail.
-6. Live ticks / anomalies / AI briefs arrive over `sessionUpdates` (imperative URQL subscription).
-7. Sidebar **Queue** (no selection): one ranked attention list (open Red incidents first, then red → orange → yellow), respecting ship-type
+6. **Chart focus:** Queue selection, demo auto-select, and Case **Locate on chart** soft-ease the camera to the contact (sidebar padding,
+   modest case zoom). Map marker clicks select without panning. Clear Case / Reset restore the theater overview. Already-in-view contacts
+   only strengthen the marker highlight. Open-incident focus gets a one-shot arrival ring. The camera never tracks live AIS ticks.
+7. Live ticks / anomalies / AI briefs arrive over `sessionUpdates` (imperative URQL subscription).
+8. Sidebar **Queue** (no selection): one ranked attention list (open Red incidents first, then red → orange → yellow), respecting ship-type
    filters. Theater OSINT is a collapsed disclosure at the bottom. Band counts live in the toolbar, not the rail.
-8. Sidebar **Case** (vessel selected): sticky identity + Why now (top factors) + Acknowledge / Request briefing; evidence is one panel at a
-   time (Timeline | Anomalies | Brief). Timeline merges risk-score changes and incident events. OSINT is not shown in Case.
-9. **Request briefing** ACKs via `vesselIntelligenceRequest` then shows progress until `SessionUpdateIntelligence` (toast on start failure /
-   timeout; Gemini failures may still publish a stub brief).
-10. On the first high/critical anomaly, the console auto-selects Galaxy Leader (`538090574`) once for the demo.
-11. When the scenario reaches the end, it loops so the board stays live.
+9. Sidebar **Case** (vessel selected): sticky identity + Why now (top factors) + Acknowledge / Locate on chart / Request briefing; evidence
+   is one panel at a time (Timeline | Anomalies | Brief). Timeline merges risk-score changes and incident events. OSINT is not shown in
+   Case.
+10. **Request briefing** ACKs via `vesselIntelligenceRequest` then shows progress until `SessionUpdateIntelligence` (toast on start failure
+    / timeout; Gemini failures may still publish a stub brief).
+11. On the first high/critical anomaly, the console auto-selects Galaxy Leader (`538090574`) once for the demo and focuses the chart.
+12. When the scenario reaches the end, it loops so the board stays live.
 
 ## Options considered
 
@@ -40,13 +44,18 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 | Warm-tinted Positron chart (chosen)        | Bronze land / muted sea; one brand | Runtime paint overrides tied to Positron layer ids                |
 | Always-expanded section dump               | Everything visible                 | Noisy; no progressive disclosure — replaced by Queue ↔ Case       |
 | Queue ↔ Case + one evidence panel (chosen) | Clear triage then investigate      | Deep evidence requires an explicit panel switch                   |
+| Sidebar-driven chart focus (chosen)        | Answers “where is this?” once      | Must not fight manual pans / map clicks                           |
+| Pan on every selection incl. map click     | Consistent camera                  | Yanks when the vessel is already under the cursor                 |
+| Continuous vessel tracking                 | Always framed                      | Steals operator agency during live AIS                            |
+| Auto-focus when Red opens                  | Demo drama                         | Steals focus mid-triage                                           |
 
 ## Option chosen
 
 Always-live fused board (mock Galaxy Leader + optional AISStream) via `scenarioEnsureLive` on `Session.watch` + imperative
 `executeSubscription` + light brand chrome (toolbar / sidebar / shell) with Queue ↔ Case attention rail. Chart basemap is Carto Positron
 with `navalChartTintApply` (bronze land `#c4a882`, muted sea `#8fa3ab`). Client-only MapLibre mount so SSR does not load GL. Mock scenario
-loops on completion; `scenarioReset` clears fused board session state for demos.
+loops on completion; `scenarioReset` clears fused board session state for demos. Chart focus is sidebar-driven (`navalMapFocus.ts`): Queue /
+auto-select / Locate ease the camera; map clicks do not; live ticks never chase.
 
 Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory player + risk engine:
 [`maritime-watch.md`](../architecture/maritime-watch.md).
@@ -58,7 +67,7 @@ Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory p
 | Route + SEO        | `src/routes/watch.tsx`                                                                                                                  |
 | Operations         | `src/routes/WatchPage.graphql`                                                                                                          |
 | Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                                 |
-| Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts`                                                            |
+| Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts` + `navalMapFocus.ts`                                       |
 | Toolbar            | `src/web/maritime/WatchToolbar.tsx` (labeled risk-band counts, open alerts, Filters popover)                                            |
 | Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (layers + ship types; owned in `watch.tsx`)                                 |
 | Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail)              |

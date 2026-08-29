@@ -32,16 +32,16 @@ export interface EnvironmentVariables {
     // `docs/architecture/maritime-watch.md`.
     aisStreamApiKey: string | undefined;
     // Optional AISStream bounding box as
-    // `southLat,westLon,northLat,eastLon`. Defaults to the Red Sea / Bab
-    // el-Mandeb theater used by the Galaxy Leader demo.
+    // `southLat,westLon,northLat,eastLon`. Defaults to the Strait of Gibraltar
+    // (dense AISStream coverage). Mock demo tracks are offset into this bbox.
     aisStreamBoundingBox: {
         southLat: number;
         westLon: number;
         northLat: number;
         eastLon: number;
     };
-    // When true (default), the Galaxy Leader mock feeder streams demo vessels
-    // into the fused watch board alongside AISStream.
+    // When true, boot starts the Galaxy Leader mock feeder. Default false —
+    // operators enable it from the watch toolbar (`mockAisSetEnabled`).
     aisMockEnabled: boolean;
     // Per-deploy salt mixed into the SHA-256 of every visitor request's
     // client IP before it lands in `Sessions.ipHash`. Salting means a DB

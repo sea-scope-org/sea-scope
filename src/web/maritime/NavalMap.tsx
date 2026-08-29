@@ -3,6 +3,7 @@ import { Spinner } from '../components/base/spinner';
 import type { GqlCWatchFieldsFragment } from '../graphql/generated';
 import { cn } from '../utils/cn';
 import type { NavalMapClientProps } from './NavalMapClient';
+import type { NavalMapFocusRequest } from './navalMapFocus';
 import type { WatchLayerFilters } from './watchFilterState';
 
 const NavalMapClient = lazy(async () => {
@@ -24,6 +25,7 @@ export interface NavalMapProps {
     protectedAssets: ReadonlyArray<ProtectedAsset>;
     layers: WatchLayerFilters;
     selectedMmsi: string | null | undefined;
+    focusRequest: NavalMapFocusRequest | null;
     onSelect: (mmsi: string) => void;
     className?: string;
 }

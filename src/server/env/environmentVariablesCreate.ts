@@ -1,14 +1,7 @@
+import { DEFAULT_AIS_STREAM_BBOX } from '../maritime/aisTheater';
 import type { EnvironmentVariables } from './EnvironmentVariables';
 
 const requiredEnvironmentVariables = ['DATABASE_URL', 'sessionCookieName', 'WEB_PAGE_URL', 'VISITOR_IP_HASH_SALT'] as const;
-
-/** Red Sea / Bab el-Mandeb — matches the Galaxy Leader demo theater. */
-const DEFAULT_AIS_STREAM_BBOX = {
-    southLat: 12,
-    westLon: 41,
-    northLat: 16,
-    eastLon: 44,
-} as const;
 
 function aisStreamBoundingBoxParse(raw: string | undefined): EnvironmentVariables['aisStreamBoundingBox'] {
     if (!raw?.trim()) return { ...DEFAULT_AIS_STREAM_BBOX };
@@ -24,7 +17,7 @@ function aisStreamBoundingBoxParse(raw: string | undefined): EnvironmentVariable
 }
 
 function aisMockEnabledParse(raw: string | undefined): boolean {
-    if (raw === undefined || raw === '') return true;
+    if (raw === undefined || raw === '') return false;
     if (raw === 'true') return true;
     if (raw === 'false') return false;
     throw new Error('AIS_MOCK_ENABLED must be "true" or "false"');

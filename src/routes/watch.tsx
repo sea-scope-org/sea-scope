@@ -15,6 +15,7 @@ import type { GqlCWatchFieldsFragment } from '../web/graphql/generated';
 import { routeLoaderGraphqlClient } from '../web/graphql/routeLoaderGraphqlClient';
 import { IntelligenceSidebar } from '../web/maritime/IntelligenceSidebar';
 import { NavalMap } from '../web/maritime/NavalMap';
+import type { NavalMapFocusRequest } from '../web/maritime/navalMapFocus';
 import { useSessionUpdates } from '../web/maritime/useSessionUpdates';
 import type { WatchFiltersState } from '../web/maritime/watchFilterState';
 import {
@@ -50,6 +51,10 @@ export const Route = createFileRoute('/watch')({
     component: WatchPage,
 });
 
+function vesselHasOpenIncident(watch: GqlCWatchFieldsFragment, mmsi: string): boolean {
+    return watch.incidents.some((incident) => incident.mmsi === mmsi && incident.status === 'open');
+}
+
 function WatchPage() {
     const data = Route.useLoaderData();
     const seedWatch = data.currentSession.watch;
@@ -60,9 +65,22 @@ function WatchPage() {
     const [, scenarioReset] = useMutation(ScenarioResetDocument);
 
     const [intelligenceBusy, setIntelligenceBusy] = useState(false);
+    const [focusRequest, setFocusRequest] = useState<NavalMapFocusRequest | null>(null);
+    const focusGenerationRef = useRef(0);
     const autoSelectedRef = useRef(false);
 
     const applyWatchRef = useRef<(watch: GqlCWatchFieldsFragment | null) => void>(() => undefined);
+    const requestChartFocusRef = useRef<(mmsi: string | null, arrivalPulse: boolean) => void>(() => undefined);
+
+    const requestChartFocus = useCallback((mmsi: string | null, arrivalPulse: boolean) => {
+        focusGenerationRef.current += 1;
+        setFocusRequest({
+            generation: focusGenerationRef.current,
+            mmsi,
+            arrivalPulse,
+        });
+    }, []);
+    requestChartFocusRef.current = requestChartFocus;
 
     const onAnomalyAppended = useCallback(
         (anomaly: GqlCWatchFieldsFragment['anomalies'][number]) => {
@@ -72,7 +90,10 @@ function WatchPage() {
             void (async () => {
                 const result = await vesselSelect({ mmsi: GALAXY_LEADER_MMSI });
                 const next = result.data?.session.vesselSelect;
-                if (next) applyWatchRef.current(next);
+                if (next) {
+                    applyWatchRef.current(next);
+                    requestChartFocusRef.current(GALAXY_LEADER_MMSI, vesselHasOpenIncident(next, GALAXY_LEADER_MMSI));
+                }
             })();
         },
         [vesselSelect],
@@ -108,24 +129,52 @@ function WatchPage() {
         [filters, liveWatch.selectedMmsi, liveWatch.vessels],
     );
 
-    const onSelect = useCallback(
-        async (mmsi: string) => {
+    const selectVessel = useCallback(
+        async (mmsi: string, options: { focus: boolean }) => {
             clearIntelligence();
             setIntelligenceBusy(false);
             const result = await vesselSelect({ mmsi });
             const next = result.data?.session.vesselSelect;
-            if (next) applyWatch(next);
+            if (next) {
+                applyWatch(next);
+                if (options.focus) {
+                    requestChartFocus(mmsi, vesselHasOpenIncident(next, mmsi));
+                }
+            }
         },
-        [applyWatch, clearIntelligence, vesselSelect],
+        [applyWatch, clearIntelligence, requestChartFocus, vesselSelect],
     );
+
+    const onSelectFromQueue = useCallback(
+        (mmsi: string) => {
+            void selectVessel(mmsi, { focus: true });
+        },
+        [selectVessel],
+    );
+
+    const onSelectFromMap = useCallback(
+        (mmsi: string) => {
+            void selectVessel(mmsi, { focus: false });
+        },
+        [selectVessel],
+    );
+
+    const onLocateOnChart = useCallback(() => {
+        const mmsi = liveWatch.selectedMmsi;
+        if (!mmsi) return;
+        requestChartFocus(mmsi, vesselHasOpenIncident(liveWatch, mmsi));
+    }, [liveWatch, requestChartFocus]);
 
     const onClearSelection = useCallback(async () => {
         clearIntelligence();
         setIntelligenceBusy(false);
         const result = await vesselSelect({ mmsi: null });
         const next = result.data?.session.vesselSelect;
-        if (next) applyWatch(next);
-    }, [applyWatch, clearIntelligence, vesselSelect]);
+        if (next) {
+            applyWatch(next);
+            requestChartFocus(null, false);
+        }
+    }, [applyWatch, clearIntelligence, requestChartFocus, vesselSelect]);
 
     const onAcknowledgeAlert = useCallback(
         async (incidentId: string) => {
@@ -142,8 +191,11 @@ function WatchPage() {
         autoSelectedRef.current = false;
         const result = await scenarioReset({});
         const next = result.data?.session.scenarioReset;
-        if (next) applyWatch(next);
-    }, [applyWatch, clearIntelligence, scenarioReset]);
+        if (next) {
+            applyWatch(next);
+            requestChartFocus(null, false);
+        }
+    }, [applyWatch, clearIntelligence, requestChartFocus, scenarioReset]);
 
     // Mutation only ACKs that Gemini work started; busy stays until SessionUpdateIntelligence.
     const onRequestIntelligence = useCallback(
@@ -202,7 +254,8 @@ function WatchPage() {
                             protectedAssets={liveWatch.protectedAssets}
                             layers={filters.layers}
                             selectedMmsi={liveWatch.selectedMmsi}
-                            onSelect={onSelect}
+                            focusRequest={focusRequest}
+                            onSelect={onSelectFromMap}
                         />
                     </div>
                 </SidebarInset>
@@ -212,7 +265,8 @@ function WatchPage() {
                     intelligence={intelligence}
                     intelligenceBusy={intelligenceBusy}
                     onRequestIntelligence={onRequestIntelligence}
-                    onSelectVessel={onSelect}
+                    onSelectVessel={onSelectFromQueue}
+                    onLocateOnChart={onLocateOnChart}
                     onAcknowledgeAlert={onAcknowledgeAlert}
                     onClearSelection={onClearSelection}
                     visibleShipTypes={filters.shipTypes}

@@ -27,17 +27,17 @@ describe('envCreate', () => {
             serverTokenSecret: undefined,
             aisStreamApiKey: undefined,
             aisStreamBoundingBox: {
-                southLat: 12,
-                westLon: 41,
-                northLat: 16,
-                eastLon: 44,
+                southLat: 35.7,
+                westLon: -6.0,
+                northLat: 36.3,
+                eastLon: -5.0,
             },
-            aisMockEnabled: true,
+            aisMockEnabled: false,
             visitorIpHashSalt: 'test-salt',
         });
     });
 
-    it('parses AISSTREAM_BBOX and defaults AIS_MOCK_ENABLED to true', () => {
+    it('parses AISSTREAM_BBOX and defaults AIS_MOCK_ENABLED to false', () => {
         const environmentVariables = environmentVariablesCreate({
             DATABASE_URL: 'postgres://x',
             sessionCookieName: 'sid',
@@ -54,19 +54,19 @@ describe('envCreate', () => {
             northLat: 15,
             eastLon: 45,
         });
-        expect(environmentVariables.aisMockEnabled).toBe(true);
+        expect(environmentVariables.aisMockEnabled).toBe(false);
     });
 
-    it('honours AIS_MOCK_ENABLED=false', () => {
+    it('honours AIS_MOCK_ENABLED=true', () => {
         const environmentVariables = environmentVariablesCreate({
             DATABASE_URL: 'postgres://x',
             sessionCookieName: 'sid',
             WEB_PAGE_URL: 'https://example.com',
             VISITOR_IP_HASH_SALT: 'test-salt',
-            AIS_MOCK_ENABLED: 'false',
+            AIS_MOCK_ENABLED: 'true',
         });
 
-        expect(environmentVariables.aisMockEnabled).toBe(false);
+        expect(environmentVariables.aisMockEnabled).toBe(true);
     });
 
     it('treats sessionCookieSecure other than "true" as false', () => {

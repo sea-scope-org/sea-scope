@@ -1,40 +1,54 @@
 import { aisVesselPositionPersist } from '../../commands/aisVesselPositionPersist';
 import type { ServerRuntime } from '../../domain/ServerRuntime';
-import type { EnvironmentVariables } from '../../env/EnvironmentVariables';
+import { environmentVariables } from '../../env/environmentVariablesCreate';
+import { aisStreamBoundingBoxOffset } from '../aisTheater';
 import { DEFAULT_SCENARIO_ID, scenarioDefinitionGet, scenarioPositionSample } from '../scenarioRuntime';
-import { vesselTrackStoreMarkPersisted, vesselTrackStoreUpsertPosition } from '../vesselTrackStore';
+import {
+    vesselTrackStoreMarkPersisted,
+    vesselTrackStoreRemoveBySource,
+    vesselTrackStoreUpsertPosition,
+} from '../vesselTrackStore';
 
 const REAL_TICK_MS = 500;
 const HISTORY_PERSIST_MIN_MS = 60_000;
 
-let started = false;
+let timer: ReturnType<typeof setInterval> | null = null;
 let simMs = 0;
 let status: 'running' | 'idle' | 'disabled' = 'disabled';
+let boundRuntime: ServerRuntime | null = null;
 
 export function mockScenarioSourceStatus(): 'running' | 'idle' | 'disabled' {
     return status;
 }
 
 export function mockScenarioSourceIsStarted(): boolean {
-    return started;
+    return status === 'running';
 }
 
 export function mockScenarioSourceSimMs(): number {
     return simMs;
 }
 
-/** Feed Galaxy Leader tracks into the shared vessel track store. Idempotent. */
-export function mockScenarioSourceEnsureStarted(serverRuntime: ServerRuntime, env: EnvironmentVariables): void {
-    if (!env.aisMockEnabled) {
-        status = 'disabled';
-        console.info('[mock-ais] feeder disabled (AIS_MOCK_ENABLED=false)');
-        serverRuntime.log.info('Mock AIS feeder disabled (AIS_MOCK_ENABLED=false)');
-        return;
+function stopTimer(): void {
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
     }
-    if (started) return;
-    started = true;
-    status = 'running';
+}
+
+/** Stop the mock feeder and remove mock vessels from the track store. */
+export function mockScenarioSourceStop(): number {
+    stopTimer();
+    const removed = vesselTrackStoreRemoveBySource('mock');
+    status = 'disabled';
     simMs = 0;
+    console.info(`[mock-ais] feeder stopped (removed ${removed} vessels)`);
+    return removed;
+}
+
+/** Start the Galaxy Leader mock feeder. Idempotent while already running. */
+export function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
+    if (status === 'running') return;
 
     const scenario = scenarioDefinitionGet(DEFAULT_SCENARIO_ID);
     if (!scenario) {
@@ -43,17 +57,35 @@ export function mockScenarioSourceEnsureStarted(serverRuntime: ServerRuntime, en
         return;
     }
 
-    console.info(`[mock-ais] feeder started (${scenario.title})`);
+    boundRuntime = serverRuntime;
+    status = 'running';
+    simMs = 0;
+
+    const offset = aisStreamBoundingBoxOffset(environmentVariables.aisStreamBoundingBox);
+    console.info(
+        `[mock-ais] feeder started (${scenario.title}) — offset Δlat=${offset.lat.toFixed(3)} Δlon=${offset.lon.toFixed(3)} into live bbox`,
+    );
     serverRuntime.log.info(`Mock AIS feeder started (${scenario.scenarioId})`);
+
+    const upsertMock = (vessel: (typeof scenario.vessels)[number], position: NonNullable<ReturnType<typeof scenarioPositionSample>>) => {
+        return vesselTrackStoreUpsertPosition('mock', vessel, {
+            ...position,
+            lat: position.lat + offset.lat,
+            lon: position.lon + offset.lon,
+        });
+    };
 
     for (const vessel of scenario.vessels) {
         const position = scenarioPositionSample(scenario, vessel.mmsi, simMs);
         if (!position) continue;
-        vesselTrackStoreUpsertPosition('mock', vessel, position);
+        upsertMock(vessel, position);
     }
 
-    setInterval(() => {
+    timer = setInterval(() => {
         void (async () => {
+            const runtime = boundRuntime;
+            if (!runtime || status !== 'running') return;
+
             const nextSimMs = simMs + scenario.tickIntervalMs;
             if (nextSimMs > scenario.endSimMs) {
                 simMs = scenario.startSimMs;
@@ -65,12 +97,12 @@ export function mockScenarioSourceEnsureStarted(serverRuntime: ServerRuntime, en
             for (const vessel of scenario.vessels) {
                 const position = scenarioPositionSample(scenario, vessel.mmsi, simMs);
                 if (!position) continue;
-                const tracked = vesselTrackStoreUpsertPosition('mock', vessel, position);
+                const tracked = upsertMock(vessel, position);
                 if (!tracked) continue;
 
                 const now = Date.now();
                 const persistHistory = now - tracked.lastPersistedAtMs >= HISTORY_PERSIST_MIN_MS;
-                const ok = await aisVesselPositionPersist(serverRuntime, {
+                const ok = await aisVesselPositionPersist(runtime, {
                     source: 'mock',
                     identity: tracked.identity,
                     position: tracked.position,
@@ -82,4 +114,25 @@ export function mockScenarioSourceEnsureStarted(serverRuntime: ServerRuntime, en
             }
         })();
     }, REAL_TICK_MS);
+}
+
+/**
+ * Boot hook — mock stays off unless `AIS_MOCK_ENABLED=true` (operators can still
+ * toggle via `mockAisSetEnabled` at runtime).
+ */
+export function mockScenarioSourceEnsureStarted(serverRuntime: ServerRuntime): void {
+    if (!environmentVariables.aisMockEnabled) {
+        status = 'disabled';
+        console.info('[mock-ais] feeder off by default (enable from the watch toolbar or AIS_MOCK_ENABLED=true)');
+        return;
+    }
+    mockScenarioSourceStart(serverRuntime);
+}
+
+export function mockScenarioSourceSetEnabled(serverRuntime: ServerRuntime, enabled: boolean): void {
+    if (enabled) {
+        mockScenarioSourceStart(serverRuntime);
+        return;
+    }
+    mockScenarioSourceStop();
 }

@@ -82,4 +82,33 @@ describe('aisStreamMessageParse', () => {
             }),
         ).toEqual({ kind: 'ignored' });
     });
+
+    it('parses AISStream time_utc into a valid ISO timestamp', () => {
+        const parsed = aisStreamMessageParse({
+            MessageType: 'PositionReport',
+            MetaData: {
+                MMSI: 538010321,
+                ShipName: 'SAFEEN BARONESS',
+                latitude: 36.25667,
+                longitude: -5.0095,
+                time_utc: '2026-08-29 10:09:06.964647395 +0000 UTC',
+            },
+            Message: {
+                PositionReport: {
+                    UserID: 538010321,
+                    Valid: true,
+                    Latitude: 36.25667,
+                    Longitude: -5.0095,
+                    Sog: 0.5,
+                    Cog: 90,
+                    TrueHeading: 91,
+                    NavigationalStatus: 0,
+                },
+            },
+        });
+        expect(parsed.kind).toBe('position');
+        if (parsed.kind !== 'position') return;
+        expect(Number.isNaN(Date.parse(parsed.position.timestamp))).toBe(false);
+        expect(parsed.position.lat).toBeCloseTo(36.25667);
+    });
 });

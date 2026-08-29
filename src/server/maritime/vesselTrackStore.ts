@@ -100,3 +100,13 @@ export function vesselTrackStoreList(): TrackedVessel[] {
 export function vesselTrackStoreCountBySource(source: VesselDataSourceId): number {
     return vesselTrackStoreList().filter((v) => v.source === source).length;
 }
+
+export function vesselTrackStoreRemoveBySource(source: VesselDataSourceId): number {
+    let removed = 0;
+    for (const [mmsi, vessel] of vesselsByMmsi) {
+        if (vessel.source !== source) continue;
+        vesselsByMmsi.delete(mmsi);
+        removed += 1;
+    }
+    return removed;
+}

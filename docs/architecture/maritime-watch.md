@@ -22,16 +22,19 @@ Shared across sources:
 
 ### Persistence
 
-| Piece     | Behavior                                                                                   |
-| --------- | ------------------------------------------------------------------------------------------ |
-| Ingest    | Both sources call `aisVesselPositionPersist` (soft-fail on DB errors so memory stays live) |
-| Tables    | `Vessels` + `AisPositions` with a `source` column (`mock` \| `aisstream`)                  |
-| Throttle  | History append at most once per MMSI per 60s                                               |
-| Retention | Job `ais-positions-cleanup` deletes `AisPositions` older than 7 days                       |
-| Env       | `AISSTREAM_API_KEY` / `AISSTREAM_BBOX`; `AIS_MOCK_ENABLED` (default `true`)                |
+| Piece     | Behavior                                                                                                                                                                                |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ingest    | Both sources call `aisVesselPositionPersist` (soft-fail on DB errors so memory stays live)                                                                                              |
+| Tables    | `Vessels` + `AisPositions` with a `source` column (`mock` \| `aisstream`)                                                                                                               |
+| Throttle  | History append at most once per MMSI per 60s                                                                                                                                            |
+| Retention | Job `ais-positions-cleanup` deletes `AisPositions` older than 7 days                                                                                                                    |
+| Env       | `AISSTREAM_API_KEY` / `AISSTREAM_BBOX` (default Gibraltar — Red Sea has little free AISStream coverage; mock tracks are offset into the live bbox); `AIS_MOCK_ENABLED` (default `true`) |
 
 **Prerequisite:** `DATABASE_URL` must reach Postgres. If the DB times out, GraphQL session/watch returns 500 and the map stays empty even
-when AISStream is connected (server logs only).
+when AISStream is connected.
+
+**Logging:** AISStream / mock lifecycle lines (`[aisstream] …`, `[mock-ais] …`) print to the **server terminal** running `npm run dev`, not
+the browser console. Heartbeats every 15s report message/position counts.
 
 ## Alternatives considered
 
