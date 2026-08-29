@@ -39,11 +39,7 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
     const projection = vesselProjection(vessel, nowMs);
     const reason = vessel.activeFactors.at(-1)?.explanation;
     const trend = TREND_META[vessel.riskTrend];
-    const aisStatus = vessel.aisDark
-        ? 'AIS dark'
-        : position
-          ? freshnessLabel(position.timestamp, nowMs)
-          : 'No AIS fix';
+    const aisStatus = vessel.aisDark ? 'AIS dark' : position ? freshnessLabel(position.timestamp, nowMs) : 'No AIS fix';
 
     return (
         <div
@@ -60,7 +56,12 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
                         </span>
                     </div>
                 </div>
-                <div className={cn('flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 font-semibold', RISK_TONE[vessel.riskLevel])}>
+                <div
+                    className={cn(
+                        'flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 font-semibold',
+                        RISK_TONE[vessel.riskLevel],
+                    )}
+                >
                     <ShieldAlert className="size-3.5" aria-hidden />
                     <span>{vessel.riskScore}</span>
                     <trend.Icon className="size-3.5" aria-label={trend.label} />
