@@ -5,13 +5,13 @@ import {
     CompassIcon,
     FlagIcon,
     GaugeIcon,
+    HashIcon,
     MapPinnedIcon,
     RadioTowerIcon,
     RouteIcon,
     SatelliteIcon,
     ShieldAlertIcon,
     ShipIcon,
-    WavesIcon,
 } from 'lucide-react';
 import type { ComponentType, SVGProps } from 'react';
 import { cn } from '../utils/cn';
@@ -65,7 +65,7 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
             <div className="grid grid-cols-2 gap-px bg-border text-[10px]">
                 <PreviewMetric Icon={FlagIcon} label="Flag" value={vessel.flag || 'Unknown'} />
                 <PreviewMetric Icon={ShipIcon} label="MMSI" value={vessel.mmsi} />
-                {vessel.imo ? <PreviewMetric Icon={WavesIcon} label="IMO" value={vessel.imo} /> : null}
+                {vessel.imo ? <PreviewMetric Icon={HashIcon} label="IMO" value={vessel.imo} /> : null}
                 <PreviewMetric Icon={GaugeIcon} label="Speed" value={position ? `${position.sog.toFixed(1)} kn` : 'No fix'} />
                 <PreviewMetric
                     Icon={CompassIcon}
