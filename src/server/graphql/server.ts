@@ -25,7 +25,7 @@ let serverStarted = false;
 async function ensureServerStarted() {
     if (!serverStarted) {
         await graphqlServer.start();
-        mockScenarioSourceEnsureStarted(serverRuntime, environmentVariables);
+        mockScenarioSourceEnsureStarted(serverRuntime);
         aisStreamIngestEnsureStarted(serverRuntime, environmentVariables);
         watchBoardTickDriverStart(serverRuntime);
         await ensureJobsStarted(serverRuntime);

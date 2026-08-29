@@ -9,7 +9,8 @@ loop is **MAP → PRIORITY → WHY → ALERT** (see [`docs/features/seascope.md`
 
 Run a **fused multi-source watch board** behind one GraphQL `WatchState` + `sessionUpdates` SSE surface:
 
-1. **Mock source (`mock`)** — Galaxy Leader curated AIS replay fed into a shared track store on a wall-clock tick (demo incidents).
+1. **Mock source (`mock`)** — Galaxy Leader curated AIS replay. Off by default; operators enable it from the watch toolbar
+   (`mockAisSetEnabled`) or boot with `AIS_MOCK_ENABLED=true`.
 2. **Live source (`aisstream`)** — AISStream WebSocket ingest into the same store + Postgres persistence when `AISSTREAM_API_KEY` is set.
 
 Shared across sources:
@@ -22,13 +23,13 @@ Shared across sources:
 
 ### Persistence
 
-| Piece     | Behavior                                                                                                                                                                                |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ingest    | Both sources call `aisVesselPositionPersist` (soft-fail on DB errors so memory stays live)                                                                                              |
-| Tables    | `Vessels` + `AisPositions` with a `source` column (`mock` \| `aisstream`)                                                                                                               |
-| Throttle  | History append at most once per MMSI per 60s                                                                                                                                            |
-| Retention | Job `ais-positions-cleanup` deletes `AisPositions` older than 7 days                                                                                                                    |
-| Env       | `AISSTREAM_API_KEY` / `AISSTREAM_BBOX` (default Gibraltar — Red Sea has little free AISStream coverage; mock tracks are offset into the live bbox); `AIS_MOCK_ENABLED` (default `true`) |
+| Piece     | Behavior                                                                                                                                                                                                                                     |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ingest    | Both sources call `aisVesselPositionPersist` (soft-fail on DB errors so memory stays live)                                                                                                                                                   |
+| Tables    | `Vessels` + `AisPositions` with a `source` column (`mock` \| `aisstream`)                                                                                                                                                                    |
+| Throttle  | History append at most once per MMSI per 60s                                                                                                                                                                                                 |
+| Retention | Job `ais-positions-cleanup` deletes `AisPositions` older than 7 days                                                                                                                                                                         |
+| Env       | `AISSTREAM_API_KEY` / `AISSTREAM_BBOX` (default Gibraltar — Red Sea has little free AISStream coverage; mock tracks are offset into the live bbox); `AIS_MOCK_ENABLED` (default `false`; boot-only — runtime toggle via `mockAisSetEnabled`) |
 
 **Prerequisite:** `DATABASE_URL` must reach Postgres. If the DB times out, GraphQL session/watch returns 500 and the map stays empty even
 when AISStream is connected.
@@ -47,7 +48,8 @@ the browser console. Heartbeats every 15s report message/position counts.
 
 ## Consequences
 
-- Operators always see demo vessels when mock is enabled; live traffic appears alongside in the same theater.
+- Operators see live AISStream traffic by default; demo vessels appear only after enabling the mock feeder from the toolbar (or
+  `AIS_MOCK_ENABLED=true` at boot).
 - Vessel identity + position history survive restarts in Postgres; in-memory risk/anomaly board does not.
 - Feature UX: [`watch-console.md`](../features/watch-console.md).
 

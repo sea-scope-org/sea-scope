@@ -505,6 +505,8 @@ export interface GqlSSessionMutation {
     chatInputCollectionRespond?: Maybe<GqlSChatMessageCreateResult>;
     chatMessageCreate?: Maybe<GqlSChatMessageCreateResult>;
     chatToolApprovalRespond?: Maybe<GqlSChatMessageCreateResult>;
+    /** Enable or disable the Galaxy Leader mock AIS feeder (off by default). */
+    mockAisSetEnabled?: Maybe<GqlSWatchState>;
     scenarioReset?: Maybe<GqlSWatchState>;
     vesselIntelligenceRequest: GqlSMutationResult;
     vesselSelect?: Maybe<GqlSWatchState>;
@@ -532,6 +534,10 @@ export type GqlSSessionMutationChatToolApprovalRespondArgs = {
     approved: Scalars['Boolean']['input'];
     assistantOptions: GqlSChatAssistantOptions;
     reason?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type GqlSSessionMutationMockAisSetEnabledArgs = {
+    enabled: Scalars['Boolean']['input'];
 };
 
 export type GqlSSessionMutationVesselIntelligenceRequestArgs = {
@@ -1703,6 +1709,12 @@ export type GqlSSessionMutationResolvers<
         ParentType,
         ContextType,
         RequireFields<GqlSSessionMutationChatToolApprovalRespondArgs, 'approvalId' | 'approved' | 'assistantOptions'>
+    >;
+    mockAisSetEnabled?: Resolver<
+        Maybe<GqlSResolversTypes['WatchState']>,
+        ParentType,
+        ContextType,
+        RequireFields<GqlSSessionMutationMockAisSetEnabledArgs, 'enabled'>
     >;
     scenarioReset?: Resolver<Maybe<GqlSResolversTypes['WatchState']>, ParentType, ContextType>;
     vesselIntelligenceRequest?: Resolver<

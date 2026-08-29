@@ -1,4 +1,4 @@
-import { RadarIcon, RotateCcwIcon } from 'lucide-react';
+import { RadarIcon, RotateCcwIcon, SparklesIcon } from 'lucide-react';
 import { Badge } from '../components/base/badge';
 import { Button } from '../components/base/button';
 import { Separator } from '../components/base/separator';
@@ -18,14 +18,26 @@ export interface WatchToolbarProps {
     shipTypeCatalog: ReadonlyArray<string>;
     onFiltersChange: (next: WatchFiltersState) => void;
     onReset?: () => void;
+    onMockAisToggle?: (enabled: boolean) => void;
     className?: string;
 }
 
 const BAND_ORDER: ReadonlyArray<RiskLevel> = ['red', 'orange', 'yellow', 'green'];
 
-export function WatchToolbar({ watch, countedVessels, filters, shipTypeCatalog, onFiltersChange, onReset, className }: WatchToolbarProps) {
+export function WatchToolbar({
+    watch,
+    countedVessels,
+    filters,
+    shipTypeCatalog,
+    onFiltersChange,
+    onReset,
+    onMockAisToggle,
+    className,
+}: WatchToolbarProps) {
     const openAlerts = watch.incidents.filter((i) => i.status === 'open').length;
     const alertLabel = openAlerts === 1 ? '1 alert' : `${openAlerts} alerts`;
+    const mockSource = watch.dataSources.find((source) => source.id === 'mock');
+    const mockEnabled = mockSource?.enabled ?? false;
 
     const bandCounts: Record<RiskLevel, number> = { green: 0, yellow: 0, orange: 0, red: 0 };
     for (const vessel of countedVessels) {
@@ -81,20 +93,22 @@ export function WatchToolbar({ watch, countedVessels, filters, shipTypeCatalog, 
                     <>
                         <Separator orientation="vertical" className="h-5" />
                         <ul className="flex flex-wrap items-center gap-1.5" aria-label="Data sources">
-                            {watch.dataSources.map((source) => (
-                                <li key={source.id}>
-                                    <Badge
-                                        variant="outline"
-                                        className="rounded-sm px-1.5 py-0 text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
-                                        title={source.status}
-                                    >
-                                        {source.id === 'aisstream' ? 'live' : 'demo'} {source.vesselCount}
-                                        {source.id === 'aisstream' && source.vesselCount === 0 && source.status.includes('waiting')
-                                            ? '…'
-                                            : ''}
-                                    </Badge>
-                                </li>
-                            ))}
+                            {watch.dataSources
+                                .filter((source) => source.enabled || source.id === 'aisstream')
+                                .map((source) => (
+                                    <li key={source.id}>
+                                        <Badge
+                                            variant="outline"
+                                            className="rounded-sm px-1.5 py-0 text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
+                                            title={source.status}
+                                        >
+                                            {source.id === 'aisstream' ? 'live' : 'demo'} {source.vesselCount}
+                                            {source.id === 'aisstream' && source.vesselCount === 0 && source.status.includes('waiting')
+                                                ? '…'
+                                                : ''}
+                                        </Badge>
+                                    </li>
+                                ))}
                         </ul>
                     </>
                 ) : null}
@@ -102,6 +116,20 @@ export function WatchToolbar({ watch, countedVessels, filters, shipTypeCatalog, 
 
             <div className="ml-auto flex items-center gap-1">
                 <WatchFilters filters={filters} shipTypeCatalog={shipTypeCatalog} onChange={onFiltersChange} />
+                {onMockAisToggle ? (
+                    <Button
+                        type="button"
+                        size="xs"
+                        variant={mockEnabled ? 'secondary' : 'ghost'}
+                        className="gap-1 tracking-wide uppercase"
+                        onClick={() => onMockAisToggle(!mockEnabled)}
+                        title={mockEnabled ? 'Disable Galaxy Leader demo stream' : 'Enable Galaxy Leader demo stream'}
+                        aria-pressed={mockEnabled}
+                    >
+                        <SparklesIcon className="size-3.5" aria-hidden />
+                        {mockEnabled ? 'Demo on' : 'Demo'}
+                    </Button>
+                ) : null}
                 {onReset ? (
                     <Button
                         type="button"
@@ -109,7 +137,7 @@ export function WatchToolbar({ watch, countedVessels, filters, shipTypeCatalog, 
                         variant="ghost"
                         className="gap-1 tracking-wide uppercase"
                         onClick={onReset}
-                        title="Reset demo scenario"
+                        title="Reset watch session"
                     >
                         <RotateCcwIcon className="size-3.5" aria-hidden />
                         Reset

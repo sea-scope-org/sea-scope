@@ -5,6 +5,7 @@ import { chatMessageCreate } from '../commands/chatMessageCreate';
 import { chatToolApprovalRespond } from '../commands/chatToolApprovalRespond';
 import {
     alertAcknowledge,
+    mockAisSetEnabled,
     scenarioEnsureLive,
     scenarioReset,
     vesselIntelligenceRequest,
@@ -44,6 +45,7 @@ import type {
     GqlSSessionMutationChatInputCollectionRespondArgs,
     GqlSSessionMutationChatMessageCreateArgs,
     GqlSSessionMutationChatToolApprovalRespondArgs,
+    GqlSSessionMutationMockAisSetEnabledArgs,
     GqlSSessionMutationVesselIntelligenceRequestArgs,
     GqlSSessionMutationVesselSelectArgs,
     GqlSSessionUpdate,
@@ -147,6 +149,9 @@ export function resolversCreate(serverRuntime: ServerRuntime): GqlSResolvers {
             },
             scenarioReset(parent: GqlSSessionMutation, _args: Record<string, never>, requestingSession: GqlSSession) {
                 return scenarioReset(parent, {}, requestingSession, serverRuntime);
+            },
+            mockAisSetEnabled(parent: GqlSSessionMutation, args: GqlSSessionMutationMockAisSetEnabledArgs, requestingSession: GqlSSession) {
+                return mockAisSetEnabled(parent, args, requestingSession, serverRuntime);
             },
             chatMessageCreate(parent: GqlSSessionMutation, args: GqlSSessionMutationChatMessageCreateArgs, requestingSession: GqlSSession) {
                 return chatMessageCreate(

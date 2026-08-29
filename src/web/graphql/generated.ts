@@ -508,6 +508,8 @@ export interface GqlCSessionMutation {
     chatInputCollectionRespond?: Maybe<GqlCChatMessageCreateResult>;
     chatMessageCreate?: Maybe<GqlCChatMessageCreateResult>;
     chatToolApprovalRespond?: Maybe<GqlCChatMessageCreateResult>;
+    /** Enable or disable the Galaxy Leader mock AIS feeder (off by default). */
+    mockAisSetEnabled?: Maybe<GqlCWatchState>;
     scenarioReset?: Maybe<GqlCWatchState>;
     vesselIntelligenceRequest: GqlCMutationResult;
     vesselSelect?: Maybe<GqlCWatchState>;
@@ -535,6 +537,10 @@ export type GqlCSessionMutationChatToolApprovalRespondArgs = {
     approved: Scalars['Boolean']['input'];
     assistantOptions: GqlCChatAssistantOptions;
     reason?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type GqlCSessionMutationMockAisSetEnabledArgs = {
+    enabled: Scalars['Boolean']['input'];
 };
 
 export type GqlCSessionMutationVesselIntelligenceRequestArgs = {
@@ -1565,6 +1571,91 @@ export type GqlCScenarioResetMutationVariables = Exact<{ [key: string]: never }>
 export type GqlCScenarioResetMutation = {
     session: {
         scenarioReset: {
+            scenarioId: string;
+            title: string;
+            description: string;
+            status: Schema.GqlCWatchStatus;
+            simMs: number;
+            centerLat: number;
+            centerLon: number;
+            zoom: number;
+            selectedMmsi: string | null;
+            dataSources: Array<{ id: Schema.GqlCVesselDataSource; enabled: boolean; status: string; vesselCount: number }>;
+            vessels: Array<{
+                mmsi: string;
+                name: string;
+                imo: string | null;
+                shipType: string;
+                flag: string;
+                aisDark: boolean;
+                dataSource: Schema.GqlCVesselDataSource;
+                riskScore: number;
+                riskLevel: Schema.GqlCRiskLevel;
+                riskTrend: Schema.GqlCRiskTrend;
+                nearestAssetId: string | null;
+                nearestAssetDistanceNm: number | null;
+                activeFactors: Array<{ rule: Schema.GqlCRiskRule; scoreDelta: number; explanation: string; source: string }>;
+                trackTail: Array<{ lat: number; lon: number }>;
+                radarPosition: { lat: number; lon: number } | null;
+                position: { lat: number; lon: number; sog: number; cog: number; heading: number; timestamp: string } | null;
+            }>;
+            anomalies: Array<{
+                anomalyId: string;
+                mmsi: string;
+                kind: Schema.GqlCAnomalyKind;
+                severity: Schema.GqlCAnomalySeverity;
+                title: string;
+                summary: string;
+                detectedAtSimMs: number;
+                evidence: unknown;
+            }>;
+            riskEvents: Array<{
+                riskEventId: string;
+                mmsi: string;
+                detectedAtSimMs: number;
+                rule: Schema.GqlCRiskRule;
+                scoreDelta: number;
+                previousScore: number;
+                newScore: number;
+                explanation: string;
+                source: string;
+            }>;
+            incidents: Array<{
+                incidentId: string;
+                mmsi: string;
+                openedAtSimMs: number;
+                closedAtSimMs: number | null;
+                maxRiskScore: number;
+                status: Schema.GqlCIncidentStatus;
+                timeline: Array<{
+                    eventId: string;
+                    detectedAtSimMs: number;
+                    eventType: string;
+                    source: string;
+                    explanation: string;
+                    riskChange: number | null;
+                }>;
+            }>;
+            osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
+            highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
+            protectedAssets: Array<{
+                assetId: string;
+                name: string;
+                type: Schema.GqlCProtectedAssetType;
+                riskRadiusNm: number;
+                path: Array<{ lat: number; lon: number }>;
+            }>;
+        } | null;
+    };
+};
+
+export type GqlCMockAisSetEnabledMutationVariables = Exact<{
+    enabled: boolean;
+}>;
+
+export type GqlCMockAisSetEnabledMutation = {
+    session: {
+        mockAisSetEnabled: {
             scenarioId: string;
             title: string;
             description: string;
@@ -5143,6 +5234,280 @@ export const ScenarioResetDocument = {
         },
     ],
 } as unknown as DocumentNode<GqlCScenarioResetMutation, GqlCScenarioResetMutationVariables>;
+export const MockAisSetEnabledDocument = {
+    kind: 'Document',
+    definitions: [
+        {
+            kind: 'OperationDefinition',
+            operation: 'mutation',
+            name: { kind: 'Name', value: 'MockAisSetEnabled' },
+            variableDefinitions: [
+                {
+                    kind: 'VariableDefinition',
+                    variable: { kind: 'Variable', name: { kind: 'Name', value: 'enabled' } },
+                    type: { kind: 'NonNullType', type: { kind: 'NamedType', name: { kind: 'Name', value: 'Boolean' } } },
+                },
+            ],
+            selectionSet: {
+                kind: 'SelectionSet',
+                selections: [
+                    {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'session' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'mockAisSetEnabled' },
+                                    arguments: [
+                                        {
+                                            kind: 'Argument',
+                                            name: { kind: 'Name', value: 'enabled' },
+                                            value: { kind: 'Variable', name: { kind: 'Name', value: 'enabled' } },
+                                        },
+                                    ],
+                                    selectionSet: {
+                                        kind: 'SelectionSet',
+                                        selections: [{ kind: 'FragmentSpread', name: { kind: 'Name', value: 'WatchFields' } }],
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            kind: 'FragmentDefinition',
+            name: { kind: 'Name', value: 'WatchFields' },
+            typeCondition: { kind: 'NamedType', name: { kind: 'Name', value: 'WatchState' } },
+            selectionSet: {
+                kind: 'SelectionSet',
+                selections: [
+                    { kind: 'Field', name: { kind: 'Name', value: 'scenarioId' } },
+                    { kind: 'Field', name: { kind: 'Name', value: 'title' } },
+                    { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+                    { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                    { kind: 'Field', name: { kind: 'Name', value: 'simMs' } },
+                    { kind: 'Field', name: { kind: 'Name', value: 'centerLat' } },
+                    { kind: 'Field', name: { kind: 'Name', value: 'centerLon' } },
+                    { kind: 'Field', name: { kind: 'Name', value: 'zoom' } },
+                    { kind: 'Field', name: { kind: 'Name', value: 'selectedMmsi' } },
+                    {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'dataSources' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'enabled' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'vesselCount' } },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'vessels' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'mmsi' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'imo' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'shipType' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'flag' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'aisDark' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'riskScore' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'riskLevel' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'riskTrend' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'nearestAssetId' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'nearestAssetDistanceNm' } },
+                                {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'activeFactors' },
+                                    selectionSet: {
+                                        kind: 'SelectionSet',
+                                        selections: [
+                                            { kind: 'Field', name: { kind: 'Name', value: 'rule' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'scoreDelta' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'explanation' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'source' } },
+                                        ],
+                                    },
+                                },
+                                {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'trackTail' },
+                                    selectionSet: {
+                                        kind: 'SelectionSet',
+                                        selections: [
+                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
+                                        ],
+                                    },
+                                },
+                                {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'radarPosition' },
+                                    selectionSet: {
+                                        kind: 'SelectionSet',
+                                        selections: [
+                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
+                                        ],
+                                    },
+                                },
+                                {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'position' },
+                                    selectionSet: {
+                                        kind: 'SelectionSet',
+                                        selections: [
+                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'sog' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'cog' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'heading' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'timestamp' } },
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'anomalies' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'anomalyId' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'mmsi' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'kind' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'severity' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'title' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'summary' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'detectedAtSimMs' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'evidence' } },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'riskEvents' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'riskEventId' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'mmsi' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'detectedAtSimMs' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'rule' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'scoreDelta' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'previousScore' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'newScore' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'explanation' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'source' } },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'incidents' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'incidentId' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'mmsi' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'openedAtSimMs' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'closedAtSimMs' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'maxRiskScore' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                                {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'timeline' },
+                                    selectionSet: {
+                                        kind: 'SelectionSet',
+                                        selections: [
+                                            { kind: 'Field', name: { kind: 'Name', value: 'eventId' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'detectedAtSimMs' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'eventType' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'source' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'explanation' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'riskChange' } },
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'osintAlerts' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'alertId' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'source' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'title' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'body' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'region' } },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'highRiskZones' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'zoneId' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                                {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'ring' },
+                                    selectionSet: {
+                                        kind: 'SelectionSet',
+                                        selections: [
+                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'protectedAssets' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'assetId' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'riskRadiusNm' } },
+                                {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'path' },
+                                    selectionSet: {
+                                        kind: 'SelectionSet',
+                                        selections: [
+                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
+                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
+                                        ],
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+        },
+    ],
+} as unknown as DocumentNode<GqlCMockAisSetEnabledMutation, GqlCMockAisSetEnabledMutationVariables>;
 export const SessionUpdatesDocument = {
     kind: 'Document',
     definitions: [

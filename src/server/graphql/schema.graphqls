@@ -610,7 +610,9 @@ type SessionMutation {
     vesselIntelligenceRequest(mmsi: ID!): MutationResult!
     alertAcknowledge(incidentId: ID!): WatchState
     scenarioReset: WatchState
-    """Enable or disable the Galaxy Leader mock AIS feeder (off by default)."""
+    """
+    Enable or disable the Galaxy Leader mock AIS feeder (off by default).
+    """
     mockAisSetEnabled(enabled: Boolean!): WatchState
     chatMessageCreate(chatId: ID, message: String!, fileUploadIds: [ID!], assistantOptions: ChatAssistantOptions!): ChatMessageCreateResult
     chatInputCollectionRespond(

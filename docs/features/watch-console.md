@@ -7,9 +7,9 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 1. From the home page, **Open console / demo** navigates to `/watch`.
 2. The page is full-viewport, `noindex`, and not in the sitemap. Shell chrome follows the light brand tokens; the MapLibre chart uses Carto
    Positron retinted to warm bronze land and muted sea (see [`theme.md`](../styles/theme.md)).
-3. The fused watch board is live on load: **Galaxy Leader mock** vessels stream by default, and **live AISStream** positions appear
-   alongside when `AISSTREAM_API_KEY` is set. Use toolbar **Reset** to clear selection / risk stickies. Toolbar badges show demo/live vessel
-   counts.
+3. The fused watch board is live on load with **live AISStream** positions when `AISSTREAM_API_KEY` is set. The **Galaxy Leader demo**
+   stream is **off by default** — enable it with the toolbar **Demo** button (`mockAisSetEnabled`). Toolbar badges show live (and demo, when
+   on) vessel counts. **Reset** clears selection / risk stickies for the session.
 4. Toolbar **Filters** toggles chart layers (protected assets / Cable C17, high-risk zones, track tails, radar contacts) and vessel
    `shipType`s. Filters are client-only and shared by the chart, Queue, and toolbar band counts (all on by default; **Show all** resets). A
    vessel already in **Case** stays on the map if its type is unchecked; Queue still hides unchecked types.
@@ -26,16 +26,17 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
    Case.
 10. **Request briefing** ACKs via `vesselIntelligenceRequest` then shows progress until `SessionUpdateIntelligence` (toast on start failure
     / timeout; Gemini failures may still publish a stub brief).
-11. On the first high/critical anomaly, the console auto-selects Galaxy Leader (`538090574`) once for the demo and focuses the chart.
-12. When the scenario reaches the end, it loops so the board stays live.
+11. When the demo stream is on, the first high/critical anomaly auto-selects Galaxy Leader (`538090574`) once and focuses the chart.
+12. When the demo scenario reaches the end, it loops so the board stays live.
 
 ## Options considered
 
 | Option                                     | Pros                               | Cons                                                              |
 | ------------------------------------------ | ---------------------------------- | ----------------------------------------------------------------- |
-| Auto-live on watch resolve (chosen)        | Always-on demo feed                | Query has a mild side effect (ensures player + tick driver)       |
-| Start / pause buttons                      | Operator controls the beat         | Extra friction; contradicts “always live”                         |
-| Reset mutation (chosen)                    | Judges can replay                  | Minimal chrome                                                    |
+| Auto-live on watch resolve (chosen)        | Always-on live feed                | Query has a mild side effect (ensures tick driver)                |
+| Mock off by default + Demo toggle (chosen) | Live map uncluttered; opt-in demo  | Judges must click Demo once                                       |
+| Mock on by default                         | Instant narrative                  | Hides live contacts among demo clutter                            |
+| Reset mutation (chosen)                    | Judges can replay session state    | Minimal chrome                                                    |
 | `useSubscription`                          | Less code                          | Duplicate events under concurrent React — rejected (same as chat) |
 | Marketing card layout                      | Familiar                           | Wrong density for an ops console                                  |
 | Navy/cyan full-dark chrome                 | Ops-console cliché                 | Breaks the light-only brand in [`theme.md`](../styles/theme.md)   |
@@ -51,11 +52,11 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 
 ## Option chosen
 
-Always-live fused board (mock Galaxy Leader + optional AISStream) via `scenarioEnsureLive` on `Session.watch` + imperative
+Always-live fused board (optional AISStream + opt-in Galaxy Leader mock) via `scenarioEnsureLive` on `Session.watch` + imperative
 `executeSubscription` + light brand chrome (toolbar / sidebar / shell) with Queue ↔ Case attention rail. Chart basemap is Carto Positron
-with `navalChartTintApply` (bronze land `#c4a882`, muted sea `#8fa3ab`). Client-only MapLibre mount so SSR does not load GL. Mock scenario
-loops on completion; `scenarioReset` clears fused board session state for demos. Chart focus is sidebar-driven (`navalMapFocus.ts`): Queue /
-auto-select / Locate ease the camera; map clicks do not; live ticks never chase.
+with `navalChartTintApply` (bronze land `#c4a882`, muted sea `#8fa3ab`). Client-only MapLibre mount so SSR does not load GL. Mock feeder
+defaults off; toolbar **Demo** calls `mockAisSetEnabled`. Mock loops on completion; `scenarioReset` clears fused board session state. Chart
+focus is sidebar-driven (`navalMapFocus.ts`): Queue / auto-select / Locate ease the camera; map clicks do not; live ticks never chase.
 
 Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory player + risk engine:
 [`maritime-watch.md`](../architecture/maritime-watch.md).
@@ -68,7 +69,7 @@ Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory p
 | Operations         | `src/routes/WatchPage.graphql`                                                                                                          |
 | Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                                 |
 | Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts` + `navalMapFocus.ts`                                       |
-| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (labeled risk-band counts, open alerts, Filters popover)                                            |
+| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (risk bands, alerts, Demo toggle, Filters)                                                          |
 | Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (layers + ship types; owned in `watch.tsx`)                                 |
 | Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail)              |
 | Shared rail bits   | `src/web/maritime/watchSidebarShared.tsx`                                                                                               |

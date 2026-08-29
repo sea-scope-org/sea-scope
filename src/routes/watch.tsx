@@ -6,6 +6,7 @@ import { useMutation } from 'urql';
 import { SidebarInset, SidebarProvider } from '../web/components/base/sidebar';
 import {
     AlertAcknowledgeDocument,
+    MockAisSetEnabledDocument,
     ScenarioResetDocument,
     VesselIntelligenceRequestDocument,
     VesselSelectDocument,
@@ -63,6 +64,7 @@ function WatchPage() {
     const [, vesselIntelligenceRequest] = useMutation(VesselIntelligenceRequestDocument);
     const [, alertAcknowledge] = useMutation(AlertAcknowledgeDocument);
     const [, scenarioReset] = useMutation(ScenarioResetDocument);
+    const [, mockAisSetEnabled] = useMutation(MockAisSetEnabledDocument);
 
     const [intelligenceBusy, setIntelligenceBusy] = useState(false);
     const [focusRequest, setFocusRequest] = useState<NavalMapFocusRequest | null>(null);
@@ -197,6 +199,27 @@ function WatchPage() {
         }
     }, [applyWatch, clearIntelligence, requestChartFocus, scenarioReset]);
 
+    const onMockAisToggle = useCallback(
+        async (enabled: boolean) => {
+            if (!enabled) {
+                clearIntelligence();
+                setIntelligenceBusy(false);
+                autoSelectedRef.current = false;
+            }
+            const result = await mockAisSetEnabled({ enabled });
+            const next = result.data?.session.mockAisSetEnabled;
+            if (result.error || !next) {
+                toast.error(enabled ? 'Could not enable demo stream.' : 'Could not disable demo stream.');
+                return;
+            }
+            applyWatch(next);
+            if (!enabled) {
+                requestChartFocus(null, false);
+            }
+        },
+        [applyWatch, clearIntelligence, mockAisSetEnabled, requestChartFocus],
+    );
+
     // Mutation only ACKs that Gemini work started; busy stays until SessionUpdateIntelligence.
     const onRequestIntelligence = useCallback(
         async (mmsi: string) => {
@@ -242,6 +265,7 @@ function WatchPage() {
                         shipTypeCatalog={shipTypeCatalog}
                         onFiltersChange={setFilters}
                         onReset={onReset}
+                        onMockAisToggle={onMockAisToggle}
                     />
                     <div className="relative min-h-0 min-w-0 flex-1">
                         <NavalMap

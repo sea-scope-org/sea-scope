@@ -164,6 +164,14 @@ mutation ScenarioReset {
     }
 }
 
+mutation MockAisSetEnabled($enabled: Boolean!) {
+    session {
+        mockAisSetEnabled(enabled: $enabled) {
+            ...WatchFields
+        }
+    }
+}
+
 subscription SessionUpdates {
     sessionUpdates {
         __typename

@@ -3,11 +3,7 @@ import type { ServerRuntime } from '../../domain/ServerRuntime';
 import { environmentVariables } from '../../env/environmentVariablesCreate';
 import { aisStreamBoundingBoxOffset } from '../aisTheater';
 import { DEFAULT_SCENARIO_ID, scenarioDefinitionGet, scenarioPositionSample } from '../scenarioRuntime';
-import {
-    vesselTrackStoreMarkPersisted,
-    vesselTrackStoreRemoveBySource,
-    vesselTrackStoreUpsertPosition,
-} from '../vesselTrackStore';
+import { vesselTrackStoreMarkPersisted, vesselTrackStoreRemoveBySource, vesselTrackStoreUpsertPosition } from '../vesselTrackStore';
 
 const REAL_TICK_MS = 500;
 const HISTORY_PERSIST_MIN_MS = 60_000;
@@ -37,7 +33,7 @@ function stopTimer(): void {
 }
 
 /** Stop the mock feeder and remove mock vessels from the track store. */
-export function mockScenarioSourceStop(): number {
+function mockScenarioSourceStop(): number {
     stopTimer();
     const removed = vesselTrackStoreRemoveBySource('mock');
     status = 'disabled';
@@ -47,7 +43,7 @@ export function mockScenarioSourceStop(): number {
 }
 
 /** Start the Galaxy Leader mock feeder. Idempotent while already running. */
-export function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
+function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
     if (status === 'running') return;
 
     const scenario = scenarioDefinitionGet(DEFAULT_SCENARIO_ID);

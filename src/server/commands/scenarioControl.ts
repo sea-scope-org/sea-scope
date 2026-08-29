@@ -1,11 +1,13 @@
 import type { ServerRuntime } from '../domain/ServerRuntime';
 import type { GqlSMutationResult, GqlSSession, GqlSSessionMutation, GqlSWatchState } from '../graphql/generated';
 import { toGqlWatchState } from '../mappers/toGqlWatch';
+import { mockScenarioSourceSetEnabled } from '../maritime/sources/mockScenarioSource';
 import {
     watchBoardDataSources,
     watchBoardOverlayScenario,
     watchBoardSessionAcknowledgeAlert,
     watchBoardSessionEnsure,
+    watchBoardSessionList,
     watchBoardSessionReset,
     watchBoardSessionSelectVessel,
     watchBoardSnapshot,
@@ -116,6 +118,38 @@ export async function scenarioReset(
             sessionId: parent.sessionId,
             payload: { kind: 'watchSnapshot' },
         });
+        return watchStateForSession(parent.sessionId);
+    } catch (error) {
+        serverRuntime.log.error(error, requestingSession);
+        return null;
+    }
+}
+
+export async function mockAisSetEnabled(
+    parent: GqlSSessionMutation,
+    args: { enabled: boolean },
+    requestingSession: GqlSSession,
+    serverRuntime: ServerRuntime,
+): Promise<GqlSWatchState | null> {
+    try {
+        scenarioEnsureLive(parent.sessionId, serverRuntime);
+
+        const before = watchBoardSnapshot(parent.sessionId, watchBoardOverlayScenario());
+        const selectedWasMock =
+            before.selectedMmsi != null && before.vessels.some((v) => v.mmsi === before.selectedMmsi && v.dataSource === 'mock');
+
+        mockScenarioSourceSetEnabled(serverRuntime, args.enabled);
+
+        if (!args.enabled && selectedWasMock) {
+            watchBoardSessionSelectVessel(parent.sessionId, null);
+        }
+
+        for (const sessionId of watchBoardSessionList()) {
+            await serverRuntime.publish.sessionUpdates({
+                sessionId,
+                payload: { kind: 'watchSnapshot' },
+            });
+        }
         return watchStateForSession(parent.sessionId);
     } catch (error) {
         serverRuntime.log.error(error, requestingSession);
