@@ -22,8 +22,8 @@ Cookie-based session management with automatic session creation on every GraphQL
 5. The response includes a `Set-Cookie` header to persist the session ID in the browser. The cookie is set `HttpOnly` so the session ID is
    not readable from JavaScript (mitigating XSS exfiltration), along with `Secure` + `SameSite=None` when `sessionCookieSecure=true`
    (production) and `SameSite=Lax` otherwise — see `createSetSessionCookie` in `src/server/utils/sessionUtils.ts`. SSR must forward the
-   incoming cookie to `/api/graphql` over the public HTTPS origin (not `request.url`'s possibly-`http` value behind Coolify) or every
-   document load mints a new session — see [api-layer.md](./api-layer.md#session--cookie-handover).
+   incoming cookie to `/api/graphql` over the public HTTPS origin (not `request.url`'s possibly-`http` value behind a TLS-terminating proxy)
+   or every document load mints a new session — see [api-layer.md](./api-layer.md#session--cookie-handover).
 
 ### Session Lifecycle
 

@@ -24,7 +24,7 @@ Apollo Server is set up in `src/server/graphql/server.ts` with two execution pat
 
 The schema is built with `@graphql-tools/schema` (`makeExecutableSchema`) combining the SDL and resolvers from `resolversCreate()`. The SDL
 file is imported with Vite's `?raw` suffix (`import schemaSource from './schema.graphqls?raw'`) so its contents are inlined into the server
-bundle — runtime `readFileSync` against a relative path would fail in the production Docker image, which only copies `.output/`.
+bundle — runtime `readFileSync` against a relative path would fail in the production nitro output, which only ships `.output/`.
 
 ### Client (URQL)
 
@@ -201,11 +201,11 @@ During SSR, the original client request's cookies are forwarded to the internal 
 GraphQL endpoint (e.g., new session creation) are propagated back to the SSR response using `response.headers.getSetCookie()` (iterates each
 cookie individually to avoid corruption from comma-joining).
 
-The SSR hop must target an **HTTPS** origin when the site is served behind a TLS-terminating proxy (Coolify/Traefik). Building the GraphQL
-URL from `request.url` is unsafe here: srvx ≥0.11.22 ignores `X-Forwarded-Proto` unless `trustProxy` is enabled, so `request.url` becomes
-`http://…` inside the container. Node `fetch` then follows Traefik's HTTP→HTTPS `307`, and the `Cookie` header is dropped on that
-cross-scheme redirect — every document load mints a new session. `routeLoaderGraphqlClient` therefore builds the origin with
-`getRequestProtocol()` + `getRequestHost()` (h3 still honours `X-Forwarded-*` by default).
+The SSR hop must target an **HTTPS** origin when the site is served behind a TLS-terminating proxy (Vercel, Traefik, etc.). Building the
+GraphQL URL from `request.url` is unsafe here: srvx ≥0.11.22 ignores `X-Forwarded-Proto` unless `trustProxy` is enabled, so `request.url`
+becomes `http://…` behind the proxy. Node `fetch` then follows an HTTP→HTTPS `307`, and the `Cookie` header is dropped on that cross-scheme
+redirect — every document load mints a new session. `routeLoaderGraphqlClient` therefore builds the origin with `getRequestProtocol()` +
+`getRequestHost()` (h3 still honours `X-Forwarded-*` by default).
 
 ### Header Forwarding
 

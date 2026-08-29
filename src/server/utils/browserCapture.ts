@@ -18,11 +18,11 @@ let browserSingleton: Browser | undefined;
 async function getBrowser(): Promise<Browser> {
     if (!browserSingleton) {
         const { chromium } = await import('playwright');
-        // `--no-sandbox` is required because the production container runs
-        // Chromium without user-namespace support. We accept the loss of
-        // defense-in-depth in exchange for portability across Coolify hosts;
-        // the only content rendered is our own application surface, against
-        // an internally-minted HMAC token.
+        // `--no-sandbox` is required on hosts that run Chromium without
+        // user-namespace support. We accept the loss of defense-in-depth in
+        // exchange for portability across constrained runtimes; the only
+        // content rendered is our own application surface, against an
+        // internally-minted HMAC token.
         browserSingleton = await chromium.launch({ args: ['--no-sandbox'] });
     }
     return browserSingleton;

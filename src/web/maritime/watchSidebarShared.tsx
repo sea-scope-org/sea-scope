@@ -19,17 +19,19 @@ export function assetName(vessel: Vessel, assetsById: Map<string, WatchState['pr
     return assetsById.get(vessel.nearestAssetId)?.name ?? vessel.nearestAssetId;
 }
 
+export function riskBadgeClass(level: RiskLevel): string {
+    if (level === 'red') return 'border-destructive/40 bg-destructive/10 text-destructive';
+    if (level === 'orange') return 'border-orange-300 bg-orange-50 text-orange-800';
+    if (level === 'yellow') return 'border-amber-300 bg-amber-50 text-amber-900';
+    return 'border-emerald-300 bg-emerald-50 text-emerald-800';
+}
+
 export function RiskBadge({ level, score }: { level: RiskLevel; score: number }) {
-    const cls =
-        level === 'red'
-            ? 'border-destructive/40 bg-destructive/10 text-destructive'
-            : level === 'orange'
-              ? 'border-orange-300 bg-orange-50 text-orange-800'
-              : level === 'yellow'
-                ? 'border-amber-300 bg-amber-50 text-amber-900'
-                : 'border-emerald-300 bg-emerald-50 text-emerald-800';
     return (
-        <Badge variant="outline" className={cn('rounded-sm px-1.5 py-0 text-[10px] font-semibold tracking-wide uppercase', cls)}>
+        <Badge
+            variant="outline"
+            className={cn('rounded-sm px-1.5 py-0 text-[10px] font-semibold tracking-wide uppercase', riskBadgeClass(level))}
+        >
             {level} {score}
         </Badge>
     );

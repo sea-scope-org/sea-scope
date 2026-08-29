@@ -25,8 +25,8 @@ type VariablesParam<TVariables> = TVariables extends Record<string, never> ? [] 
 
 // Absolute origin for the SSR → /api/graphql hop. Must honour X-Forwarded-Proto
 // / Host: `request.url` from srvx ≥0.11.22 ignores forwarded headers unless
-// trustProxy is enabled, so behind Coolify/Traefik it becomes `http://…`.
-// Fetch then follows Traefik's HTTP→HTTPS 307 and drops the Cookie header
+// trustProxy is enabled, so behind a TLS-terminating proxy it becomes `http://…`.
+// Fetch then follows an HTTP→HTTPS 307 and drops the Cookie header
 // (http→https is a cross-origin redirect for fetch), minting a new session on
 // every document load. h3's getRequestProtocol/Host still trust X-Forwarded-*
 // by default — see docs/architecture/api-layer.md.

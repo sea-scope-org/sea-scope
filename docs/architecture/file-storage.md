@@ -12,10 +12,10 @@ Three broad options are on the table:
 2. **Local filesystem** — write files to a path on disk, keep a row in Postgres pointing at that path.
 3. **Object storage (S3 / R2 / GCS)** — upload to an external bucket, keep a row in Postgres pointing at the object key.
 
-The constraint that drives the call: this template is shipped as a **single-container deployment** (Coolify pulls one Docker image, runs it
-behind a reverse proxy, points it at a managed Postgres). It is meant to be cloned and stood up by one developer in an afternoon, with no
-external services beyond a database. Anything that adds a second piece of infrastructure on day one is a tax paid by every project that
-forks this template — including the ones that will never need horizontal scale.
+The constraint that drives the call: the app is a **single Vercel deployment** talking to **Postgres on a self-hosted VPS**. It is meant to
+be cloned and stood up by one developer in an afternoon, with no external services beyond that database. Anything that adds a second piece
+of infrastructure on day one is a tax paid by every project that forks this template — including the ones that will never need horizontal
+scale.
 
 ## Decision
 
@@ -65,8 +65,8 @@ The upload and download routes are likewise consumer-agnostic:
 
 ### When this stops being right
 
-This decision is calibrated for the template's defaults — single container, managed Postgres, per-file caps in the low tens of MB. Projects
-forking the template should revisit it when any of the following becomes true:
+This decision is calibrated for the template's defaults — single Vercel app, VPS-hosted Postgres, per-file caps in the low tens of MB.
+Projects forking the template should revisit it when any of the following becomes true:
 
 - **Total file volume is large relative to the active dataset.** A few GB of attachments alongside a 100 MB transactional dataset is fine;
   hundreds of GB of media on top of a small operational schema makes `pg_dump`, replication, and instance sizing painful.
@@ -84,16 +84,16 @@ Until that day, the row-shaped approach keeps the deployment surface area small.
 
 ## Alternatives Considered
 
-| Alternative                  | Why rejected                                                                                                                                                                                                                                                                                                                                                                                              |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Local filesystem**         | Requires a Docker volume mount in Coolify (extra config per environment), couples the file lifecycle to a path the database doesn't see (orphans on failed inserts, ghosts on cascaded deletes), and forecloses horizontal scale — two app containers can't share `/var/app/uploads` without adding NFS or a shared volume. Backups now need a second pipeline alongside the DB dump.                     |
-| **Object storage (S3 etc.)** | Adds a second external dependency on day one — credentials, bucket lifecycle, CORS, presigned URL plumbing, and a second authorization surface that has to stay in sync with the application's own. Pays off at scale; overkill for the single-container baseline this template targets. The migration path off `bytea` is a column-level change, so we defer the cost until a project actually needs it. |
-| **`oid` / large objects**    | Separate `lo_create` / `lo_write` API, a sidecar `pg_largeobject` table the rest of the persistence stack has to learn about for cleanup, and no benefit at the file sizes a per-route cap admits.                                                                                                                                                                                                        |
+| Alternative                  | Why rejected                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Local filesystem**         | Requires durable disk attached to every instance (extra config per environment), couples the file lifecycle to a path the database doesn't see (orphans on failed inserts, ghosts on cascaded deletes), and forecloses horizontal scale — two app instances can't share `/var/app/uploads` without adding NFS or a shared volume. Backups now need a second pipeline alongside the DB dump.         |
+| **Object storage (S3 etc.)** | Adds a second external dependency on day one — credentials, bucket lifecycle, CORS, presigned URL plumbing, and a second authorization surface that has to stay in sync with the application's own. Pays off at scale; overkill for the single-app baseline this template targets. The migration path off `bytea` is a column-level change, so we defer the cost until a project actually needs it. |
+| **`oid` / large objects**    | Separate `lo_create` / `lo_write` API, a sidecar `pg_largeobject` table the rest of the persistence stack has to learn about for cleanup, and no benefit at the file sizes a per-route cap admits.                                                                                                                                                                                                  |
 
 ## Consequences
 
-- **Single-container deploys stay single-container.** Cloning the template and pushing to Coolify needs Postgres and nothing else; no bucket
-  to provision, no volume to mount.
+- **Single-app deploys stay single-app.** Cloning the template, connecting Vercel, and pointing `DATABASE_URL` at the VPS Postgres needs
+  nothing else; no bucket to provision, no volume to mount on the app host.
 - **Files inherit the database's operational story.** Backups, restores, replication, transactional integrity, and authorization all work
   exactly like every other table. There is one mental model for "where state lives," not two.
 - **Database size grows with file volume.** Acceptable because per-file caps bound the rate, and the deployment is sized for a transactional

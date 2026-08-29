@@ -53,7 +53,7 @@ Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory p
 | Operations         | `src/routes/WatchPage.graphql`                                                                                             |
 | Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                    |
 | Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts`                                               |
-| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (live, sim time, band counts, alerts)                                                  |
+| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (labeled risk-band counts, open alerts)                                                |
 | Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail) |
 | Shared rail bits   | `src/web/maritime/watchSidebarShared.tsx`                                                                                  |
 | Layout shell       | `SidebarProvider` + `SidebarInset` in `watch.tsx`                                                                          |

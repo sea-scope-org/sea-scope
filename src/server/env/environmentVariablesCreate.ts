@@ -15,7 +15,7 @@ export function environmentVariablesCreate(source: NodeJS.ProcessEnv = process.e
             secure: source.sessionCookieSecure === 'true',
             domainScope: source.sessionCookieDomainScope,
         },
-        buildSha: source.BUILD_SHA ?? 'unknown',
+        buildSha: source.BUILD_SHA ?? source.VERCEL_GIT_COMMIT_SHA ?? 'unknown',
         webPageUrl: source.WEB_PAGE_URL!.replace(/\/$/, ''),
         // Capability-specific — validated by whoever consumes it (see
         // `serverRuntimeCreate`'s Google client wiring), not at boot.

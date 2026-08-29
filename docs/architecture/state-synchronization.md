@@ -79,7 +79,7 @@ publishes directly against the user id with no prefix.
   (load balancers, proxies). SSE works over standard HTTP.
 - **Polling**: Simpler but higher latency and server load; unsuitable for token-by-token AI streaming
 - **Redis pub-sub**: More scalable for multi-process deployments but adds an infrastructure dependency. PostgreSQL NOTIFY/LISTEN is
-  sufficient for single-server deployment via Coolify.
+  sufficient when all app instances share one Postgres (our self-hosted VPS).
 
 ## Consequences
 

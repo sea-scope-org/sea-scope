@@ -7,6 +7,8 @@ export interface SessionCookieConfiguration {
 export interface EnvironmentVariables {
     databaseUrl: string;
     sessionCookie: SessionCookieConfiguration;
+    // Commit SHA of the running build (`BUILD_SHA`, else Vercel's
+    // `VERCEL_GIT_COMMIT_SHA`, else `"unknown"`). Surfaced on `/api/health`.
     buildSha: string;
     // Absolute origin of the deployed site (no trailing slash, e.g.
     // `https://example.com`). Single source of truth for SEO concerns —

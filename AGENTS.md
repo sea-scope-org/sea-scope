@@ -23,7 +23,7 @@ the change. Drift between docs and code is a bug.
 - **Do not create new branches** unless the user explicitly asks you to. Work on the currently checked-out branch.
 - **Do not create or switch into a git worktree** unless the user explicitly asks for one. Never invoke `EnterWorktree`, `git worktree add`,
   or spawn an agent with `isolation: "worktree"` on your own initiative.
-- **Do not commit or push** unless the user explicitly asks. If the current branch auto-deploys (e.g. via Coolify), stop and ask before
+- **Do not commit or push** unless the user explicitly asks. If the current branch auto-deploys (e.g. via Vercel), stop and ask before
   committing — even when the user requested a commit.
 - If you think a branch or worktree would genuinely help (e.g. parallel agents that would otherwise conflict), surface that as a suggestion
   and wait for approval before acting.
@@ -197,4 +197,4 @@ docs/
 - **Testing**: Vitest, Playwright
 - **Build**: Vite 8
 - **CI**: GitHub Actions
-- **Deployment**: Docker via Coolify
+- **Deployment**: Vercel (app) + self-hosted VPS Postgres

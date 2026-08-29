@@ -13,7 +13,7 @@ polyfill) is a non-starter as a default.
 The most predictable way to get pixel-perfect parity is to drive a real browser against a route the app already serves. **Playwright with
 bundled Chromium** is the most stable cross-platform option, and is therefore declared as a **production dependency** in `package.json` from
 the template baseline — even projects that don't use it on day one inherit a working pipeline so the eventual first use does not require a
-Dockerfile rewrite.
+build-config rewrite.
 
 ## Decision
 
@@ -29,8 +29,8 @@ four pieces, each independently replaceable:
    cookie jar and we don't want render endpoints relying on a long-lived bearer token.
 3. **A capture API on `ServerRuntime`** (`browser.capture` / `browser.capturePdf`) that takes a path + token + viewport and returns a
    `Buffer`. Commands consume it like any other runtime capability — they never `import 'playwright'` directly.
-4. **Build and runtime configuration** that keeps Playwright out of the Vite/Nitro bundle and ships Chromium + its system libraries inside
-   the production Docker image.
+4. **Build and runtime configuration** that keeps Playwright out of the Vite/Nitro bundle and leaves Chromium resolvable as a real
+   `node_modules` install on any host that runs capture.
 
 ### Singleton browser
 
@@ -68,8 +68,8 @@ export async function browserCapture(options: BrowserCaptureOptions): Promise<Bu
 ```
 
 The dynamic `import('playwright')` is intentional — it keeps the module out of the bundle resolution graph at build time so externalization
-(see below) doesn't leak into routes that never touch it. `--no-sandbox` is required because the production container runs Chromium in an
-environment where user namespaces aren't available; we trade defense-in-depth for portability across Coolify/Docker hosts.
+(see below) doesn't leak into routes that never touch it. `--no-sandbox` is required in constrained hosts where user namespaces aren't
+available; we trade defense-in-depth for portability across container-like runtimes.
 
 The singleton is **never explicitly closed**. Node exits → Chromium exits with it. There is no `process.on('SIGTERM')` cleanup hook; nitro's
 listener handles signal forwarding and the OS reclaims the child process. Adding teardown introduces a class of "browser closed mid-render"
@@ -118,30 +118,16 @@ launch a real browser.
 ### Build and runtime configuration
 
 Playwright cannot be bundled. It loads Chromium-bidi via internal paths Vite can't statically resolve, and the Chromium binary is a separate
-artifact resolved relative to the install location of the npm package. Three places need to know:
+artifact resolved relative to the install location of the npm package. Two places in the build must know:
 
 1. **`vite.config.ts`** — `optimizeDeps.exclude` lists `'playwright'` and `'playwright-core'` so the dev server doesn't pre-bundle them.
 2. **Nitro rollup** — `nitro({ rollupConfig: { external: ['playwright', 'playwright-core'] } })` keeps the production server bundle from
    inlining them. Imports stay as runtime `require`/`import` calls that resolve against `node_modules` at runtime.
-3. **`Dockerfile`** — because Playwright is the only runtime dependency that cannot be inlined into the nitro bundle, the production stage
-   must:
-   - Use a Debian-based Node image (`node:24-slim`), not Alpine — Chromium's prebuilt binaries are linked against glibc.
-   - Set `ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright` to pin the browser install to a fixed, user-independent location.
-   - Rewrite `package.json` to pin `playwright` to the lockfile version and `npm install` only that tree — not `npm ci --omit=dev` of the
-     full production closure.
-   - Run `npx playwright install-deps chromium` to install the system libraries Chromium needs (fonts, libnss, libatk, etc.).
-   - Run `npx playwright install chromium` into a BuildKit cache mount, copy into `/ms-playwright`, then `chmod -R a+rX` it.
 
-These `RUN` steps are placed before the `COPY --from=build` of `.output/` so they cache across application code changes — Chromium downloads
-dominate image build time and rarely change. The cache mount keeps the browser tarball across `package.json` invalidations of the
-npm-install layer as well. See [infrastructure.md](../infrastructure.md#docker-build) for the full image layout.
-
-**Why `PLAYWRIGHT_BROWSERS_PATH` matters.** Playwright resolves its browser binaries relative to `$HOME/.cache/ms-playwright` by default.
-The install steps run as `root` (HOME=`/root`), but the container drops to `USER node` (HOME=`/home/node`) before `CMD`. Without a shared
-path, Chromium downloads into `/root/.cache/ms-playwright` while the runtime process searches `/home/node/.cache/ms-playwright` and finds
-nothing — surfacing as `browserType.launch: Executable doesn't exist at /home/node/.cache/ms-playwright/...`. Pinning the env once (before
-the install steps) makes both the root-time install and the node-time launch agree on `/ms-playwright`. The `chmod -R a+rX` ensures the
-`node` user can traverse and read the root-created files.
+Any host that actually runs capture must also install Chromium (`npx playwright install chromium` plus system libs on Linux). Local
+`npm run dev` after a normal install is enough for development. **Vercel serverless / fluid functions are not a fit for the long-lived
+Chromium singleton** — if a feature needs capture in production, run it on a Node process that can keep Playwright + Chromium on disk (or
+extract capture to a sidecar). See [infrastructure.md](../infrastructure.md) for the Vercel deploy shape.
 
 ## Alternatives Considered
 
@@ -149,24 +135,25 @@ the install steps) makes both the root-time install and the node-time launch agr
   better wait primitives, and Microsoft's ongoing investment make it the safer long-term default. The browser binary footprint is identical
   (it _is_ Chromium).
 - **Headless Chrome via `chrome-aws-lambda` / `@sparticuz/chromium`.** Optimized for Lambda-class environments; smaller binary, but they
-  ship a stripped Chromium that fails non-trivially on font rendering and modern CSS features. Not a fit for a long-running container
-  deploy.
+  ship a stripped Chromium that fails non-trivially on font rendering and modern CSS features. Not a fit for a long-running Node capture
+  process.
 - **`satori` + `resvg` for HTML-to-image.** Fast and bundle-friendly, but only supports a constrained subset of CSS — flex/grid only, no
   Canvas, no animations, no custom fonts without explicit registration. Fine for OG-image generation, useless for "render the actual app".
 - **A second Node service running just the renderer.** Cleanest isolation but doubles deployment surface area for a feature most projects
-  use sparingly. The singleton-in-process pattern can be promoted to a sidecar later if a project's render volume justifies it.
+  use sparingly. The singleton-in-process pattern can be promoted to a sidecar later if a project's render volume justifies it — and is the
+  natural path if production hosting cannot keep Chromium in-process.
 - **Long-lived bearer token instead of HMAC.** Simpler, but a leaked token would expose every render endpoint until rotated. HMAC + short
   TTL bounds blast radius without a token store.
 
 ## Consequences
 
 - Every project built on this template inherits a working browser-capture pipeline. The first feature that needs an export adds a
-  `/server/*` route, a command that calls `serverRuntime.browser.capture(...)` or `capturePdf(...)`, and ships — no Dockerfile or
-  build-config archaeology.
-- The production image is larger (~250 MB Chromium + system libs vs. a baseline `node:24-slim` of ~80 MB). This is the price of correctness;
-  we accept it as a template-wide default.
-- `playwright` stays in `dependencies` (not `devDependencies`) because the runtime stage needs it. Knip and other unused-dependency tools
-  must allowlist it for projects that haven't wired a render path yet.
+  `/server/*` route, a command that calls `serverRuntime.browser.capture(...)` or `capturePdf(...)`, and ships — no build-config
+  archaeology.
+- Chromium is large (~250 MB with system libs). Accept that cost only on hosts that actually run capture; Vercel production deploys do not
+  ship it.
+- `playwright` stays in `dependencies` (not `devDependencies`) because capture runs in the same Node process as the app when enabled. Knip
+  and other unused-dependency tools must allowlist it for projects that haven't wired a render path yet.
 - Tests must not transitively import `browserCapture.ts` — anything that does inherits a startup dependency on a Chromium binary that isn't
   installed in CI's `node_modules` (CI runs `npm ci`, which does not run Playwright's `postinstall` browser download by default). Commands
   that use the capability take it via `ServerRuntime` and tests inject a stub.

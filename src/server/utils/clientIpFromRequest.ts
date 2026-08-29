@@ -1,7 +1,7 @@
 // Extracts the client IP from a request's proxy headers.
 //
-// Production traffic arrives behind a reverse proxy (Coolify → the app
-// container) which sets `x-forwarded-for` and `x-real-ip`. We trust the
+// Production traffic arrives behind a reverse proxy (Vercel → the app)
+// which sets `x-forwarded-for` and `x-real-ip`. We trust the
 // first hop of `x-forwarded-for` because that is the originating client;
 // the chain after the first comma is a record of intermediate proxies.
 // `x-real-ip` is the fallback for proxies that only set the single-value

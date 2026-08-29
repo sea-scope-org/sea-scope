@@ -40,7 +40,7 @@ describe('envCreate', () => {
         expect(environmentVariables.sessionCookie.secure).toBe(false);
     });
 
-    it('defaults buildSha to "unknown" when BUILD_SHA is not set', () => {
+    it('defaults buildSha to "unknown" when BUILD_SHA and VERCEL_GIT_COMMIT_SHA are not set', () => {
         const environmentVariables = environmentVariablesCreate({
             DATABASE_URL: 'postgres://x',
             sessionCookieName: 'sid',
@@ -49,6 +49,18 @@ describe('envCreate', () => {
         });
 
         expect(environmentVariables.buildSha).toBe('unknown');
+    });
+
+    it('falls back to VERCEL_GIT_COMMIT_SHA when BUILD_SHA is not set', () => {
+        const environmentVariables = environmentVariablesCreate({
+            DATABASE_URL: 'postgres://x',
+            sessionCookieName: 'sid',
+            WEB_PAGE_URL: 'https://example.com',
+            VISITOR_IP_HASH_SALT: 'test-salt',
+            VERCEL_GIT_COMMIT_SHA: 'vercel-sha',
+        });
+
+        expect(environmentVariables.buildSha).toBe('vercel-sha');
     });
 
     it('strips a trailing slash from WEB_PAGE_URL', () => {

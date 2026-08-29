@@ -3,8 +3,8 @@ import type { ChatAssistantBodyBlock } from '../db/chatPayloadTypes';
 // Ephemeral live body blocks for in-flight structured answers. The
 // `assistantBlocksReplace` wire payload fans out by `chatMessageId` only
 // (pg_notify caps at 8000 bytes); the subscription resolver re-reads this
-// store before delivering GraphQL. Same process as PubSub LISTEN — Coolify
-// is single-server. Cleared on step rotate, blocks-clear, and MessageAppended.
+// store before delivering GraphQL. Same process as PubSub LISTEN — single
+// Node process. Cleared on step rotate, blocks-clear, and MessageAppended.
 
 const store = new Map<string, ChatAssistantBodyBlock[]>();
 

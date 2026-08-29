@@ -2,98 +2,41 @@
 
 ## Deployment
 
-This project is deployed via **Coolify** as a **Docker** container.
+**Application** — deployed on **Vercel**. The Git integration builds and ships on every push to `main` (production) and on every pull
+request (preview). There is no Docker image and no deploy job in GitHub Actions — Vercel owns the app CD pipeline.
 
-### Docker Build
+**Database** — **PostgreSQL on a self-hosted VPS**, not Vercel Postgres or another managed DB product. Production and preview `DATABASE_URL`
+values point at that VPS (separate databases or roles as you prefer). Backups, upgrades, and network access for the VPS are outside this
+repo; the app only needs a reachable connection string.
 
-The `Dockerfile` uses a multi-stage build:
+### Build output: nitro + TanStack Start
 
-1. **deps** — Installs all dependencies with `npm ci`
-2. **build** — Copies dependencies, runs `npm run build` (Vite production build via TanStack Start)
-3. **runtime** — Installs only the runtime package that cannot be bundled (`playwright`), downloads Chromium + its system libraries, then
-   copies the self-contained `.output/` bundle into a slim Node.js image
+`npm run build` (Vite production build via TanStack Start) emits a nitro-wrapped Node entrypoint under `.output/`. The `tanstackStart()`
+Vite plugin alone would emit only a fetch-handler module (`export default { fetch }`) with no listener; `vite.config.ts` adds the
+`nitro/vite` plugin so nitro wraps that handler in a `node:http` listener (local / self-host) and produces the Vercel-compatible output
+Vercel runs in production.
 
-The `deps` stage installs the npm version declared in `package.json#packageManager` before running `npm ci`, so Docker builds resolve the
-lockfile with the same npm version as CI. It strips `scripts.prepare` (husky) and `scripts.postinstall` (`npm dedupe`) before installing —
-neither is useful in the image, and Playwright's postinstall would try to fetch browsers (Chromium is installed only in the runtime stage).
-`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` is a second guard. A BuildKit cache mount on `/root/.npm` reuses tarballs when the lockfile changes
-instead of re-downloading the whole tree. `.dockerignore` keeps tests, docs, editor config, and similar out of the build context so
-`COPY . .` in the build stage stays small.
+Nitro inlines most application runtime deps (`react`, `@tanstack/react-router`, `pg`, etc.) into `.output/`. Playwright stays external — see
+[architecture/browser-capture.md](./architecture/browser-capture.md).
 
-**`playwright` is the one runtime dependency that cannot be inlined into the nitro bundle** (Chromium-bidi loads via paths Vite cannot
-statically resolve, so `vite.config.ts` declares it `external`). The runtime stage therefore does **not** run `npm ci --omit=dev` on the
-full tree — that would extract hundreds of packages the container never imports. It rewrites `package.json` to pin `playwright` to the
-lockfile version and runs `npm install --omit=dev`. `npm ci` cannot be used after rewriting `package.json` (the lockfile would no longer
-match).
-
-The runtime stage then runs `npx playwright install-deps chromium` and `npx playwright install chromium` to add the system libraries
-Chromium needs (fonts, libnss, libatk, ...) and download the matching Chromium build. Chromium is installed into a BuildKit cache mount
-first (`id=playwright-chromium`) and copied into `/ms-playwright`, so a `package.json` change that invalidates the npm-install layer does
-not re-download the multi-hundred-megabyte browser. These steps live above the `COPY --from=build /app/.output` so they also cache across
-application code changes. The Debian-based `node:24-slim` base is required — Chromium's prebuilt binaries are linked against glibc and will
-not run on Alpine. See [architecture/browser-capture.md](./architecture/browser-capture.md) for the full design.
-
-The runtime stage sets `ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright` **before** those install steps. Playwright resolves browser binaries
-relative to `$HOME/.cache/ms-playwright`, but the install runs as `root` while the container serves as `USER node` — leaving Chromium in
-`/root/.cache` where the `node`-owned runtime process (searching `/home/node/.cache`) can't find it, which surfaces as
-`browserType.launch: Executable doesn't exist at /home/node/.cache/ms-playwright/...`. The fixed path makes install-time and run-time agree,
-and a `chmod -R a+rX /ms-playwright` after install lets the `node` user read the root-created files.
-
-#### Build output: nitro + TanStack Start
-
-The `tanstackStart()` Vite plugin alone emits only a fetch-handler module (`export default { fetch }`) at `dist/server/server.js`. That
-module has no top-level side effects — running it under Node imports the file and exits with code 0 without ever opening a port. To produce
-a real Node entrypoint, `vite.config.ts` adds the `nitro/vite` plugin alongside `tanstackStart()`. Nitro wraps the fetch handler in a
-`node:http` listener that reads `PORT` and `HOST` from the environment, and emits a self-contained bundle at `.output/server/index.mjs` with
-its runtime dependencies inlined. This is the file the Dockerfile launches in production.
-
-Coolify terminates TLS at Traefik and forwards plain HTTP into the container with `X-Forwarded-Proto: https`. srvx ≥0.11.22 (pulled in via
-nitro) ignores those headers unless `trustProxy` is enabled, so `Request.url` reports `http://…`. Absolute URLs derived from `request.url`
-(notably the SSR → `/api/graphql` hop in `routeLoaderGraphqlClient`) must not rely on it — see
-[architecture/api-layer.md](./architecture/api-layer.md#session--cookie-handover).
-
-Nitro inlines most application runtime deps (`react`, `@tanstack/react-router`, `pg`, etc.) into `.output/`. The Docker **runtime stage
-still keeps `package.json` / `node_modules`** because Playwright (Chromium) must resolve as a real package on disk — see the Dockerfile
-notes above. Do not describe the image as "`.output` only."
-
-```bash
-docker build -t app .
-docker run -p 3000:3000 \
-  -e DATABASE_URL=... \
-  -e sessionCookieName=... \
-  -e WEB_PAGE_URL=... \
-  -e VISITOR_IP_HASH_SALT=... \
-  -e GOOGLE_GENERATIVE_AI_API_KEY=... \
-  app
-```
+Vercel terminates TLS and forwards requests into the app. Absolute URLs derived from `request.url` must not assume the inbound scheme
+matches the public HTTPS origin — see [architecture/api-layer.md](./architecture/api-layer.md#session--cookie-handover).
 
 ### Health Check
 
-The Dockerfile declares a `HEALTHCHECK` that hits `GET /api/health` (handler at `src/routes/api/health.ts`) every 30s using Node's built-in
-`fetch`. The probe reads `process.env.PORT` (falling back to `3000`) so it always targets the same port nitro is listening on — Coolify
-injects its own `PORT` value, and a hardcoded port would silently fail healthcheck and cause Traefik to respond with "no available server".
-The endpoint returns `{ status: 'ok', version: '<commit-sha>' }` with HTTP 200 as soon as the HTTP listener is up — it deliberately does
-**not** check the database, so a transient DB outage will not flap the container or trigger restarts.
-
-The `version` field is the commit SHA of the running build. It is baked into the image at build time via the `BUILD_SHA` Docker build arg
-(see `Dockerfile`), exposed as the `BUILD_SHA` environment variable inside the container, and read through `EnvironmentVariables.buildSha`.
-When the image is built without the build arg (e.g. local `docker build` without `--build-arg BUILD_SHA=...`), `version` is `"unknown"`. The
-CD workflow uses this field to verify a deploy actually replaced the running container — see
-[Continuous Deployment](#continuous-deployment-cd-github-actions). The Docker `HEALTHCHECK` itself only inspects the response status, not
-the body, so adding the field is backward compatible.
-
-Coolify reads the image's `HEALTHCHECK` automatically; no extra configuration is needed in the Coolify UI. If you want a stricter readiness
-probe (e.g. fail when the DB is unreachable), extend the handler — but be aware Coolify will then mark the container unhealthy and may
-restart it during DB blips.
+`GET /api/health` (handler at `src/routes/api/health.ts`) returns `{ status: 'ok', version: '<commit-sha>' }` with HTTP 200 as soon as the
+HTTP listener is up — it deliberately does **not** check the database. The `version` field is the commit SHA of the running build, read
+through `EnvironmentVariables.buildSha` from `BUILD_SHA` or, on Vercel, the platform-provided `VERCEL_GIT_COMMIT_SHA`. When neither is set
+(e.g. local `npm run dev`), `version` is `"unknown"`.
 
 ### Environment Variables
 
-The following environment variables must be configured in the deployment environment. They are validated at startup by
-`src/server/env/environmentVariablesCreate.ts` — see [architecture/environment.md](./architecture/environment.md).
+The following environment variables must be configured in the Vercel project (Production + Preview as needed). They are validated at startup
+by `src/server/env/environmentVariablesCreate.ts` — see [architecture/environment.md](./architecture/environment.md).
 
 | Variable                       | Required | Description                                                                                                                                                                                                                                            |
 | ------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DATABASE_URL`                 | Yes      | PostgreSQL connection string                                                                                                                                                                                                                           |
+| `DATABASE_URL`                 | Yes      | PostgreSQL connection string for the self-hosted VPS database                                                                                                                                                                                          |
 | `sessionCookieName`            | Yes      | Name of the cookie used to store the session ID                                                                                                                                                                                                        |
 | `WEB_PAGE_URL`                 | Yes      | Absolute origin of the deployed site, no trailing slash (e.g. `https://example.com`). Drives canonical URLs, the dynamic `/sitemap.xml`, and `/robots.txt` — see [architecture/discovery-seo.md](./architecture/discovery-seo.md)                      |
 | `VISITOR_IP_HASH_SALT`         | Yes      | Per-deploy salt mixed into `SHA256(salt + ":" + clientIp)` before it lands in `Sessions.ipHash`. Generate with `openssl rand -hex 32`; treat as a secret — see [architecture/authentication.md](./architecture/authentication.md)                      |
@@ -104,9 +47,12 @@ The following environment variables must be configured in the deployment environ
 
 \* `SERVER_TOKEN_SECRET` is capability-optional — validated at the browser-capture call site, not at boot.
 
+`VERCEL_GIT_COMMIT_SHA` is injected by Vercel; you do not set it manually. Override with `BUILD_SHA` only if you need a custom version
+string.
+
 ### Database Migrations
 
-Migrations are managed by Drizzle Kit. Run before or during deployment:
+Migrations are managed by Drizzle Kit. Run against the target VPS database before (or as part of) promoting schema-dependent code:
 
 ```bash
 npm run db:migrate
@@ -134,20 +80,20 @@ npm run db:check-applied
 
 `scripts/migrationsReconcile.ts` reads `drizzle/meta/_journal.json`, hashes each migration's SQL the same way Drizzle does
 (`sha256(file content)`), and inserts any hash that isn't already in `drizzle.__drizzle_migrations`, using the journal's `when` as
-`created_at`. It never mutates schema — only the ledger. Run it once locally, then again with the prod `DATABASE_URL` for Coolify's DB.
+`created_at`. It never mutates schema — only the ledger. Run it once locally, then again with the prod `DATABASE_URL` against the VPS.
 
-## Continuous Integration & Deployment (GitHub Actions)
+## Continuous Integration (GitHub Actions)
 
-CI and CD live in a single workflow: `.github/workflows/pipeline.yml`. Gate jobs run in parallel on every pull request and push to `main`;
-if all gates pass on a push to `main`, the `deploy` job builds and ships a Docker image.
+CI lives in `.github/workflows/pipeline.yml`. Gate jobs run in parallel on every pull request and push to `main`. Deployment is left to
+Vercel — this workflow does not build or push images.
 
 ### Job graph
 
 ```
                       ┌─ commitlint ─────────┐
                       ├─ codegen ────────────┤
-trigger ──────────────┼─ check ──────────────┼──── deploy (push to main only)
-                      ├─ test ───────────────┤        (Docker build + push + Coolify)
+trigger ──────────────┼─ check ──────────────┤
+                      ├─ test ───────────────┤
                       └─ migrations-check ───┘
                           (matrix: prod, preview)
 ```
@@ -189,154 +135,32 @@ script (`scripts/migrationsCheck.ts`) hashes each local migration's SQL with the
 
 PRs from forks have no access to the DB secrets and so the job is skipped on them; require a maintainer push or branch to run the check.
 
-### Deploy job
-
-Runs only on `push` to `main` and only after every gate passes. Uses a separate concurrency group (`deploy-${{ github.ref }}`,
-`cancel-in-progress: false`) so concurrent deploys queue rather than abort.
-
-1. Builds a Docker image and pushes it to **GitHub Container Registry** (GHCR) with Docker layer caching
-2. Tags the image with the commit SHA and `latest`
-3. PATCHes the Coolify application to point to the new image tag
-4. Restarts the application via the Coolify API
-5. Polls `${WEB_APP_URL}/api/health` until the response's `version` field equals the deployed commit SHA — fails the workflow on timeout (~5
-   minutes) so a Coolify restart that silently rolled back to the old image surfaces as a red deploy job
-
 ### Required secrets
 
-| Secret                 | Description                                                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `COOLIFY_URL`          | Coolify instance URL (e.g. `https://coolify.example.com`)                                                                      |
-| `COOLIFY_API_TOKEN`    | Coolify API token (Settings → API Tokens)                                                                                      |
-| `COOLIFY_SERVICE_UUID` | Application UUID (visible in the application URL)                                                                              |
-| `WEB_APP_URL`          | Public URL of the deployed app (e.g. `https://app.example.com`) — polled by the post-deploy verification step                  |
-| `DATABASE_URL_PROD`    | Connection string used by `migrations-check (prod)` — recommend a role with `SELECT` on `drizzle.__drizzle_migrations` only    |
-| `DATABASE_URL_PREVIEW` | Connection string used by `migrations-check (preview)` — recommend a role with `SELECT` on `drizzle.__drizzle_migrations` only |
+| Secret                 | Description                                                                                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL_PROD`    | Connection string for the VPS prod DB — used by `migrations-check (prod)`; recommend a role with `SELECT` on `drizzle.__drizzle_migrations` only       |
+| `DATABASE_URL_PREVIEW` | Connection string for the VPS preview DB — used by `migrations-check (preview)`; recommend a role with `SELECT` on `drizzle.__drizzle_migrations` only |
 
-> Note: the GitHub Actions secret `WEB_APP_URL` and the runtime env var `WEB_PAGE_URL` are different things. `WEB_APP_URL` is only read by
-> the post-deploy health-check polling step in `pipeline.yml`; the running app reads `WEB_PAGE_URL` for canonical URLs and SEO. Set both to
-> the same public origin in their respective places (they may differ across environments when you extend beyond the single-env default — see
-> [Extending to multiple environments](#extending-to-multiple-environments)).
+Runtime app secrets live in the Vercel project settings, not in GitHub Actions.
 
-## Coolify Deployment Strategy
+## Vercel Deployment Strategy
 
-This template ships with a **single-environment** default: every push to `main` that passes CI builds a Docker image and deploys it to one
-Coolify application. There is no test/staging app and no `production` branch — you can add those later when the project actually needs them
-(see [Extending to multiple environments](#extending-to-multiple-environments) below). Per-PR preview deployments are supported and
-recommended.
-
-### Default Setup
-
-| Environment | Coolify Resource    | Branch      | Trigger                  |
-| ----------- | ------------------- | ----------- | ------------------------ |
-| Production  | Application         | `main`      | Push to `main` (CD)      |
-| Preview     | Preview Deployments | PR branches | Pull request open/update |
-
-**Setup in Coolify:**
-
-1. Create a new Application (Docker → GHCR)
-2. Set the image to `ghcr.io/<owner>/<repo>` with tag `latest` (CD updates this on every deploy)
-3. Configure environment variables (`DATABASE_URL`, `sessionCookieSecure=true`, etc.)
-4. Attach a PostgreSQL database resource
-5. Set up the custom domain and SSL
-
-The CD job in `.github/workflows/pipeline.yml` (CI and CD share a single workflow) is already wired for this: it builds the image, PATCHes
-the Coolify application's image tag, and restarts the application via the Coolify API. The only required secrets are `COOLIFY_URL`,
-`COOLIFY_API_TOKEN`, and `COOLIFY_SERVICE_UUID` (see [Required Secrets](#required-secrets)).
-
-### Per-PR Preview Deployments
-
-Preview deployments spin up an ephemeral instance for each pull request and tear it down when the PR is merged or closed. Coolify v4 manages
-the lifecycle natively against the same Application — no additional CD workflow is required.
-
-**Setup in Coolify:**
-
-1. Open the production Application → **Preview Deployments** tab
-2. Enable preview deployments
-3. Set the **Base Domain** (e.g. `preview.example.com`) — each PR gets `pr-<number>.preview.example.com`
-4. Configure environment overrides for previews (typically a shared preview database or per-PR database)
-
-**Database options for previews:**
-
-| Option                | Pros                       | Cons                                  |
-| --------------------- | -------------------------- | ------------------------------------- |
-| Shared preview DB     | Simple, low resource usage | PRs can interfere with each other     |
-| Per-PR DB (scripted)  | Full isolation             | Requires setup/teardown scripts       |
-| Seed-only (ephemeral) | Clean state every deploy   | No persistent test data across pushes |
-
-For most teams, a **shared preview database** with schema push on deploy is sufficient:
-
-```bash
-# Add to your preview deploy command or Dockerfile entrypoint
-npx drizzle-kit push
-```
-
-Connect the repository via the Coolify GitHub App and Coolify will post deployment status checks on each PR automatically.
+**Production** tracks `main`. **Preview** deployments are created automatically for every pull request. Configure environment variables
+separately for Production and Preview in the Vercel dashboard. Both point at the **self-hosted VPS Postgres** — typically a shared preview
+database (or a separate DB/role on the same VPS) via `DATABASE_URL`.
 
 ### Database Migrations in Deployment
 
-Run migrations as part of the deploy process:
+Run migrations against the target VPS database before merging schema-dependent PRs (the `migrations-check` gate enforces this). Preferred
+pattern:
 
 ```bash
-# Option A: Run before restarting (CI/CD step after image push)
-DATABASE_URL=<prod-url> npx drizzle-kit migrate
-
-# Option B: Run on container start (entrypoint script)
-#!/bin/sh
-npx drizzle-kit migrate && node .output/server/index.mjs
+DATABASE_URL=<vps-prod-or-preview-url> npm run db:migrate
 ```
 
-Option A is safer — if the migration fails, the old container keeps running.
-
-## Extending to Multiple Environments
-
-When you outgrow the single-environment default, the typical next step is to split into a **test** environment that tracks `main` and a
-**production** environment that tracks a dedicated `production` branch. Promoting becomes an explicit `main` → `production` merge, which
-gives you a manual gate before production deploys.
-
-| Environment | Coolify Resource | Branch       | Trigger                              |
-| ----------- | ---------------- | ------------ | ------------------------------------ |
-| Test        | Application      | `main`       | Push to `main` (CD)                  |
-| Production  | Application      | `production` | Merge `main` → `production` (manual) |
-
-### Steps to Extend
-
-1. **Create a `production` branch** on GitHub from the current `main` and protect it (require PRs, restrict who can merge).
-2. **Create a second Coolify Application** for production: same GHCR image, separate environment variables, separate domain, separate
-   PostgreSQL database. Keep the existing application as the test environment.
-3. **Generate a second Coolify API token** so each environment can be revoked independently. Add these GitHub Actions secrets:
-
-| Secret                      | Description                 |
-| --------------------------- | --------------------------- |
-| `COOLIFY_SERVICE_UUID_TEST` | Test application UUID       |
-| `COOLIFY_SERVICE_UUID_PROD` | Production application UUID |
-| `COOLIFY_API_TOKEN_TEST`    | Token for test app          |
-| `COOLIFY_API_TOKEN_PROD`    | Token for production app    |
-
-You can keep using a single shared token if you prefer, but separate tokens are easier to rotate.
-
-4. **Update `.github/workflows/pipeline.yml`** so both gate jobs and the deploy job run on pushes to `production` as well as `main`. The
-   simplest shape is to add `production` to the existing trigger filter:
-
-```yaml
-on:
-  pull_request:
-    branches: [main, production]
-  push:
-    branches: [main, production]
-```
-
-5. **Update the `deploy` job in `.github/workflows/pipeline.yml`** to deploy each branch to its corresponding application — typically a
-   matrix over `{ env: test, prod }` with a `branch == ref` filter, selecting the right `COOLIFY_SERVICE_UUID_*` / `COOLIFY_API_TOKEN_*` per
-   entry.
-6. **Promote with a PR**: when you want to release, open a PR from `main` → `production`. Merging it triggers `pipeline.yml` on
-   `production`, which runs the gates and then the deploy job against the production application.
-
-### Going Further
-
-- **Additional environments** (e.g. a stakeholder demo app) — repeat the steps above with another application, branch, and secret pair.
-- **Move previews off the test app** — by default, per-PR previews live alongside the `main`/test application. If you want previews to stage
-  against production-like configuration instead, enable Preview Deployments on the production application and disable them on the test
-  application.
+Do this before the code that depends on the new schema reaches the matching Vercel environment. Avoid running migrations as a silent
+side-effect of the first request — a failed migration should not leave a half-live deployment.
 
 ## Storybook (GitHub Pages)
 
@@ -347,7 +171,7 @@ Workflow: `.github/workflows/storybook.yml`
 
 ### How it works
 
-The workflow runs on pushes to `main` that include at least one change under `src/web/components/`\*\*, or on manual `workflow_dispatch`.
+The workflow runs on pushes to `main` that include at least one change under `src/web/components/`, or on manual `workflow_dispatch`.
 GitHub's native `paths` filter handles the path check across the entire push range, so multi-commit pushes work correctly. The workflow runs
 in parallel with CI — a CI failure on the same commit shows as a separate red check and does not block the deploy.
 

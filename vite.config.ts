@@ -57,8 +57,8 @@ const config = defineConfig({
     // Playwright drives a separately-installed Chromium binary and loads
     // chromium-bidi via internal paths Vite cannot statically resolve. It
     // must stay external on both the dev server (optimizeDeps) and the
-    // production nitro bundle (rollup external) — the runtime image
-    // installs it as a real `node_modules` dependency. See
+    // production nitro bundle (rollup external) — hosts that run capture
+    // install it as a real `node_modules` dependency. See
     // `docs/architecture/browser-capture.md`.
     optimizeDeps: {
         // maplibre-gl v6 ships a separate worker module that Vite's dep

@@ -503,10 +503,10 @@ The template ships a server-side image-rendering pipeline. To use it:
   from `src/server/utils/serverToken.ts`, not the session cookie. `__root` should omit nav-progress / toaster / floating chrome on these
   paths and force a white / neutral body so PDF pages don't pick up site chrome or themed `--background`.
 - **The signing secret is `SERVER_TOKEN_SECRET`** (capability-specific — only required by features that actually call `browserCapture`). Set
-  it in `.env.local` and in your Coolify environment.
-- **Do not edit `vite.config.ts`'s Playwright externals or the runtime stage of `Dockerfile`** without reading
-  [architecture/browser-capture.md](./architecture/browser-capture.md) — `playwright` must stay external on both, and the runtime image must
-  keep installing Chromium.
+  it in `.env.local` and in your Vercel environment.
+- **Do not edit `vite.config.ts`'s Playwright externals** without reading
+  [architecture/browser-capture.md](./architecture/browser-capture.md) — `playwright` must stay external on both the Vite dep optimizer and
+  the nitro rollup bundle, and any host that runs capture must ship a Chromium binary Playwright can resolve.
 
 ## Jobs (Background Processing)
 

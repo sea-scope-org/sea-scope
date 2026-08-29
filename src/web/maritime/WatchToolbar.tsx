@@ -1,11 +1,12 @@
 import { RadarIcon, RotateCcwIcon } from 'lucide-react';
-import { formatHms } from '../../shared';
 import { Badge } from '../components/base/badge';
 import { Button } from '../components/base/button';
 import { Separator } from '../components/base/separator';
 import { SidebarTrigger } from '../components/base/sidebar';
 import type { GqlCWatchFieldsFragment } from '../graphql/generated';
 import { cn } from '../utils/cn';
+import { riskBadgeClass } from './watchSidebarShared';
+import type { RiskLevel } from './watchSidebarShared';
 
 export interface WatchToolbarProps {
     watch: GqlCWatchFieldsFragment;
@@ -13,12 +14,13 @@ export interface WatchToolbarProps {
     className?: string;
 }
 
+const BAND_ORDER: ReadonlyArray<RiskLevel> = ['red', 'orange', 'yellow', 'green'];
+
 export function WatchToolbar({ watch, onReset, className }: WatchToolbarProps) {
-    const simSec = Math.floor(watch.simMs / 1000);
     const openAlerts = watch.incidents.filter((i) => i.status === 'open').length;
     const alertLabel = openAlerts === 1 ? '1 alert' : `${openAlerts} alerts`;
 
-    const bandCounts = { green: 0, yellow: 0, orange: 0, red: 0 };
+    const bandCounts: Record<RiskLevel, number> = { green: 0, yellow: 0, orange: 0, red: 0 };
     for (const vessel of watch.vessels) {
         bandCounts[vessel.riskLevel] += 1;
     }
@@ -40,38 +42,21 @@ export function WatchToolbar({ watch, onReset, className }: WatchToolbarProps) {
             </div>
 
             <div className="mx-auto flex flex-wrap items-center gap-2">
-                <Badge
-                    variant="outline"
-                    className="rounded border-emerald-600/40 bg-emerald-50 px-2 py-1 text-[10px] font-semibold tracking-[0.16em] text-emerald-800 uppercase"
-                    title="Mocked AIS feed is streaming"
-                >
-                    Live
-                </Badge>
-
-                <Separator orientation="vertical" className="h-5" />
-
-                <Badge
-                    variant="outline"
-                    className="rounded bg-muted px-2.5 py-1 font-mono text-xs font-normal tabular-nums text-foreground"
-                    title="Simulation time"
-                >
-                    T+{formatHms(simSec)}
-                </Badge>
-
-                <Separator orientation="vertical" className="h-5" />
-
-                <p
-                    className="font-mono text-[11px] tabular-nums text-muted-foreground"
-                    title={`${watch.vessels.length} vessels by risk band`}
-                >
-                    <span className="text-destructive">{bandCounts.red}</span>
-                    <span className="text-border"> / </span>
-                    <span className="text-orange-700">{bandCounts.orange}</span>
-                    <span className="text-border"> / </span>
-                    <span className="text-amber-800">{bandCounts.yellow}</span>
-                    <span className="text-border"> / </span>
-                    <span className="text-emerald-800">{bandCounts.green}</span>
-                </p>
+                <ul className="flex flex-wrap items-center gap-1.5" aria-label="Vessels by risk band">
+                    {BAND_ORDER.map((level) => (
+                        <li key={level}>
+                            <Badge
+                                variant="outline"
+                                className={cn(
+                                    'rounded-sm px-1.5 py-0 text-[10px] font-semibold tracking-wide uppercase',
+                                    riskBadgeClass(level),
+                                )}
+                            >
+                                {bandCounts[level]} {level}
+                            </Badge>
+                        </li>
+                    ))}
+                </ul>
 
                 {openAlerts > 0 ? (
                     <>

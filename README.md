@@ -7,7 +7,7 @@ prioritization**: scored risk bands, an attention-first operator sidebar, protec
 incident timelines, and Gemini briefs grounded in the deterministic risk engine.
 
 **Stack:** TanStack Start + React 19 · MapLibre GL · Apollo Server v5 + URQL (SDL-first GraphQL) · Drizzle ORM + PostgreSQL · graphql-sse +
-PG NOTIFY/LISTEN · pg-boss · Vercel AI SDK (Gemini) · Tailwind 4 + shadcn/Radix · Vitest + Playwright · Docker via Coolify.
+PG NOTIFY/LISTEN · pg-boss · Vercel AI SDK (Gemini) · Tailwind 4 + shadcn/Radix · Vitest + Playwright · Vercel + VPS Postgres.
 
 Open `/watch` after `npm run dev` for the watch console (Galaxy Leader demo: MAP → PRIORITY → WHY → ALERT). Product docs:
 [`docs/features/seascope.md`](./docs/features/seascope.md), [`docs/features/watch-console.md`](./docs/features/watch-console.md). Agent
@@ -43,14 +43,14 @@ Required at boot:
 | `VISITOR_IP_HASH_SALT`         | Salt for hashed client IPs on sessions   |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini key for chat / agent features     |
 
-Production values are set in Coolify (or your host), not in committed `.env*` files.
+Production values are set in the Vercel project settings, not in committed `.env*` files.
 
 ## Docs
 
 | Doc                                                  | When                                               |
 | ---------------------------------------------------- | -------------------------------------------------- |
 | [`docs/conventions.md`](./docs/conventions.md)       | Naming, commands, user-facing copy, UI conventions |
-| [`docs/infrastructure.md`](./docs/infrastructure.md) | Deploy, CI, Docker, env vars                       |
+| [`docs/infrastructure.md`](./docs/infrastructure.md) | Deploy, CI, env vars                               |
 | [`docs/architecture/`](./docs/architecture/)         | Auth, API, jobs, chat, SEO, maritime watch, …      |
 | [`docs/features/`](./docs/features/)                 | Shipped feature behaviour                          |
 
