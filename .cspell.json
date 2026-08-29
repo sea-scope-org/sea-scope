@@ -11,7 +11,9 @@
         ".vscode",
         ".husky/_",
         ".env*",
-        ".claude"
+        ".claude",
+        "**/protectedInfrastructure.json",
+        "**/protected-infrastructure.geojson"
     ],
     "import": ["@cspell/dict-de-de/cspell-ext.json"],
     "words": [
@@ -68,6 +70,7 @@
         "Dottxt",
         "Dotxml",
         "effectful",
+        "EMODnet",
         "exfiltration",
         "favourite",
         "favourites",
@@ -115,6 +118,10 @@
         "MapLibre",
         "materialising",
         "MDA",
+        "oilGas",
+        "pipelineClass",
+        "submarinecablemap",
+        "TeleGeography",
         "METAREA",
         "minzoom",
         "MMSI",
@@ -136,6 +143,7 @@
         "OSINT",
         "Paraglide",
         "persistable",
+        "Peucker",
         "pgboss",
         "Positron",
         "PPAS",

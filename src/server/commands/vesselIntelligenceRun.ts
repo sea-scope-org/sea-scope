@@ -109,8 +109,16 @@ async function vesselIntelligenceRun({
         `Incident: ${JSON.stringify(incident ?? null)}`,
         `Anomalies: ${JSON.stringify(anomalies)}`,
         `OSINT: ${JSON.stringify(osint)}`,
-        `Protected assets: ${JSON.stringify(scenario.protectedAssets.map((a) => ({ assetId: a.assetId, name: a.name, type: a.type })))}`,
-        `Nearest asset: ${JSON.stringify(nearestAsset ? { assetId: nearestAsset.assetId, name: nearestAsset.name } : null)}`,
+        `Nearest protected asset: ${JSON.stringify(
+            nearestAsset
+                ? {
+                      assetId: nearestAsset.assetId,
+                      name: nearestAsset.name,
+                      type: nearestAsset.type,
+                      distanceNm: vessel.nearestAssetDistanceNm,
+                  }
+                : null,
+        )}`,
         `Simulated observations (mock sensors): ${JSON.stringify(simObs)}`,
         `High-risk zones: ${JSON.stringify(scenario.highRiskZones.map((zone) => ({ zoneId: zone.zoneId, name: zone.name })))}`,
     ].join('\n');

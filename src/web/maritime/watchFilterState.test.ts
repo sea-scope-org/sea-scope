@@ -5,6 +5,7 @@ import {
     watchFiltersCreate,
     watchFiltersOffCount,
     watchFiltersReconcile,
+    watchInfrastructureLayersVisible,
     watchShipTypesFromVessels,
 } from './watchFilterState';
 
@@ -15,9 +16,12 @@ describe('watchFilterState', () => {
 
     it('starts with all layers and ship types on', () => {
         const filters = watchFiltersCreate(['Tanker', 'Tug']);
-        expect(filters.layers.protectedAssets).toBe(true);
+        expect(filters.layers.cables).toBe(true);
+        expect(filters.layers.pipelinesOilGas).toBe(true);
+        expect(filters.layers.pipelinesOther).toBe(true);
         expect(filters.shipTypes.has('Tanker')).toBe(true);
         expect(watchFiltersOffCount(filters, ['Tanker', 'Tug'])).toBe(0);
+        expect(watchInfrastructureLayersVisible(filters.layers)).toBe(true);
     });
 
     it('reconciles: keeps unchecked, adds new types as checked', () => {
@@ -39,13 +43,16 @@ describe('watchFilterState', () => {
     it('counts layer and ship-type offs', () => {
         const filters = {
             layers: {
-                protectedAssets: false,
+                cables: false,
+                pipelinesOilGas: true,
+                pipelinesOther: false,
                 highRiskZones: true,
                 trackTails: false,
                 radarContacts: true,
             },
             shipTypes: new Set(['Tug']),
         };
-        expect(watchFiltersOffCount(filters, ['Tanker', 'Tug'])).toBe(3);
+        expect(watchFiltersOffCount(filters, ['Tanker', 'Tug'])).toBe(4);
+        expect(watchInfrastructureLayersVisible(filters.layers)).toBe(true);
     });
 });

@@ -1,5 +1,5 @@
 import { setWorkerUrl } from 'maplibre-gl';
-import type { Map as MapLibreMap } from 'maplibre-gl';
+import type { FilterSpecification, Map as MapLibreMap } from 'maplibre-gl';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Map, { Layer, Marker, NavigationControl, Source } from 'react-map-gl/maplibre';
@@ -16,9 +16,11 @@ import {
     navalMapFocusPrefersReducedMotion,
 } from './navalMapFocus';
 import type { NavalMapFocusRequest } from './navalMapFocus';
+import { protectedInfrastructureResolveName, useProtectedInfrastructure } from './useProtectedInfrastructure';
 import { VesselMarker } from './VesselMarker';
 import { vesselProjection } from './vesselVisuals';
 import type { WatchLayerFilters } from './watchFilterState';
+import { watchInfrastructureLayersVisible } from './watchFilterState';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // MapLibre v6 workers are separate ESM modules — Vite needs an explicit URL
@@ -28,7 +30,6 @@ setWorkerUrl(maplibreWorkerUrl);
 type WatchState = GqlCWatchFieldsFragment;
 type Vessel = WatchState['vessels'][number];
 type HighRiskZone = WatchState['highRiskZones'][number];
-type ProtectedAsset = WatchState['protectedAssets'][number];
 
 export interface NavalMapClientProps {
     centerLat: number;
@@ -36,7 +37,6 @@ export interface NavalMapClientProps {
     zoom: number;
     vessels: ReadonlyArray<Vessel>;
     highRiskZones: ReadonlyArray<HighRiskZone>;
-    protectedAssets: ReadonlyArray<ProtectedAsset>;
     layers: WatchLayerFilters;
     selectedMmsi: string | null | undefined;
     focusRequest: NavalMapFocusRequest | null;
@@ -52,7 +52,6 @@ export function NavalMapClient({
     zoom,
     vessels,
     highRiskZones,
-    protectedAssets,
     layers,
     selectedMmsi,
     focusRequest,
@@ -74,9 +73,12 @@ export function NavalMapClient({
     const [arrivalPulseMmsi, setArrivalPulseMmsi] = useState<string | null>(null);
     const [previewMmsi, setPreviewMmsi] = useState<string | null>(null);
     const [nowMs, setNowMs] = useState(() => Date.now());
+    const { catalog, nameById, attribution } = useProtectedInfrastructure();
 
     const zoneGeoJson = useMemo(() => zonesToGeoJson(highRiskZones), [highRiskZones]);
-    const assetGeoJson = useMemo(() => assetsToGeoJson(protectedAssets), [protectedAssets]);
+    const assetGeoJson = useMemo(() => catalog ?? emptyFeatureCollection, [catalog]);
+    const infrastructureFilter = useMemo(() => infrastructureLayerFilter(layers), [layers]);
+    const showInfrastructure = watchInfrastructureLayersVisible(layers) && Boolean(catalog);
     const activeMmsi = previewMmsi ?? selectedMmsi ?? null;
     const trackGeoJson = useMemo(() => tracksToGeoJson(vessels, activeMmsi), [activeMmsi, vessels]);
     const projectionGeoJson = useMemo(() => projectionsToGeoJson(vessels, activeMmsi, nowMs), [activeMmsi, nowMs, vessels]);
@@ -209,11 +211,12 @@ export function NavalMapClient({
                     </Source>
                 ) : null}
 
-                {layers.protectedAssets ? (
+                {showInfrastructure ? (
                     <Source id="protected-assets" type="geojson" data={assetGeoJson}>
                         <Layer
                             id="protected-assets-line"
                             type="line"
+                            filter={infrastructureFilter}
                             paint={{
                                 'line-color': ['match', ['get', 'type'], 'pipeline', '#9a3412', 'cable', '#1e179f', '#1e179f'],
                                 'line-width': ['match', ['get', 'type'], 'pipeline', 3, 2.5],
@@ -225,6 +228,7 @@ export function NavalMapClient({
                             id="protected-assets-label"
                             type="symbol"
                             minzoom={5}
+                            filter={infrastructureFilter}
                             layout={{
                                 'symbol-placement': 'line',
                                 'text-field': ['get', 'name'],
@@ -282,9 +286,7 @@ export function NavalMapClient({
                     if (!position) return null;
                     const selected = vessel.mmsi === selectedMmsi;
                     const arrivalPulse = vessel.mmsi === arrivalPulseMmsi;
-                    const asset = vessel.nearestAssetId
-                        ? (protectedAssets.find((item) => item.assetId === vessel.nearestAssetId)?.name ?? null)
-                        : null;
+                    const asset = vessel.nearestAssetId ? protectedInfrastructureResolveName(vessel.nearestAssetId, nameById) : null;
 
                     const previewOpen = previewMmsi === vessel.mmsi;
 
@@ -328,9 +330,31 @@ export function NavalMapClient({
                       })
                     : null}
             </Map>
-            <MapLegend />
+            <MapLegend attribution={attribution} />
         </div>
     );
+}
+
+const emptyFeatureCollection: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+
+function infrastructureLayerFilter(layers: WatchLayerFilters): FilterSpecification {
+    const clauses: FilterSpecification[] = [];
+    if (layers.cables) {
+        clauses.push(['==', ['get', 'type'], 'cable']);
+    }
+    if (layers.pipelinesOilGas) {
+        clauses.push(['all', ['==', ['get', 'type'], 'pipeline'], ['==', ['get', 'pipelineClass'], 'oilGas']]);
+    }
+    if (layers.pipelinesOther) {
+        clauses.push(['all', ['==', ['get', 'type'], 'pipeline'], ['==', ['get', 'pipelineClass'], 'other']]);
+    }
+    if (clauses.length === 0) {
+        return ['==', ['get', 'type'], '__none__'];
+    }
+    if (clauses.length === 1) {
+        return clauses[0]!;
+    }
+    return ['any', ...clauses] as FilterSpecification;
 }
 
 function zonesToGeoJson(zones: ReadonlyArray<HighRiskZone>) {
@@ -351,20 +375,6 @@ function zonesToGeoJson(zones: ReadonlyArray<HighRiskZone>) {
                 },
             };
         }),
-    };
-}
-
-function assetsToGeoJson(assets: ReadonlyArray<ProtectedAsset>) {
-    return {
-        type: 'FeatureCollection' as const,
-        features: assets.map((asset) => ({
-            type: 'Feature' as const,
-            properties: { assetId: asset.assetId, name: asset.name, type: asset.type },
-            geometry: {
-                type: 'LineString' as const,
-                coordinates: asset.path.map((p) => [p.lon, p.lat] as [number, number]),
-            },
-        })),
     };
 }
 
@@ -412,7 +422,7 @@ function projectionsToGeoJson(vessels: ReadonlyArray<Vessel>, activeMmsi: string
     };
 }
 
-function MapLegend() {
+function MapLegend({ attribution }: { attribution: string | null }) {
     return (
         <details className="absolute top-3 left-3 max-w-64 rounded-md border border-border bg-background/95 text-[10px] text-foreground shadow-sm">
             <summary className="cursor-pointer px-3 py-2 font-semibold tracking-wide uppercase">Map legend</summary>
@@ -427,9 +437,14 @@ function MapLegend() {
                 </p>
                 <p>Orientation = heading · faded = stale · dashed ring = AIS dark · double outline = selected.</p>
                 <p>
+                    <span className="font-semibold text-foreground">Solid navy</span> = submarine cable ·{' '}
+                    <span className="font-semibold text-foreground">dashed bronze</span> = pipeline.
+                </p>
+                <p>
                     <span className="font-semibold text-foreground">Solid</span> = observed (muted; stronger when focused) ·{' '}
                     <span className="font-semibold text-foreground">dashed</span> = calculated projection, not declared intent.
                 </p>
+                {attribution ? <p className="text-[9px] leading-snug">{attribution}</p> : null}
             </div>
         </details>
     );

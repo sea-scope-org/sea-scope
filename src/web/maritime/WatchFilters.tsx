@@ -8,11 +8,13 @@ import { cn } from '../utils/cn';
 import type { WatchFiltersState, WatchLayerFilters } from './watchFilterState';
 import { watchFiltersCreate, watchFiltersOffCount } from './watchFilterState';
 
-const LAYER_OPTIONS: ReadonlyArray<{ key: keyof WatchLayerFilters; label: string }> = [
-    { key: 'protectedAssets', label: 'Protected assets' },
-    { key: 'highRiskZones', label: 'High-risk zones' },
-    { key: 'trackTails', label: 'Track tails' },
-    { key: 'radarContacts', label: 'Radar contacts' },
+const LAYER_OPTIONS: ReadonlyArray<{ key: keyof WatchLayerFilters; label: string; section: 'infrastructure' | 'chart' }> = [
+    { key: 'cables', label: 'Submarine cables', section: 'infrastructure' },
+    { key: 'pipelinesOilGas', label: 'Oil & gas pipelines', section: 'infrastructure' },
+    { key: 'pipelinesOther', label: 'Other pipelines', section: 'infrastructure' },
+    { key: 'highRiskZones', label: 'High-risk zones', section: 'chart' },
+    { key: 'trackTails', label: 'Track tails', section: 'chart' },
+    { key: 'radarContacts', label: 'Radar contacts', section: 'chart' },
 ];
 
 export interface WatchFiltersProps {
@@ -44,6 +46,9 @@ export function WatchFilters({ filters, shipTypeCatalog, onChange, className }: 
         onChange(watchFiltersCreate(shipTypeCatalog));
     };
 
+    const infrastructure = LAYER_OPTIONS.filter((option) => option.section === 'infrastructure');
+    const chart = LAYER_OPTIONS.filter((option) => option.section === 'chart');
+
     return (
         <Popover>
             <PopoverTrigger asChild>
@@ -61,12 +66,26 @@ export function WatchFilters({ filters, shipTypeCatalog, onChange, className }: 
             <PopoverContent align="end" className="w-72 gap-0 p-0">
                 <PopoverHeader className="border-b border-border px-3 py-2.5">
                     <PopoverTitle className="text-xs font-semibold tracking-[0.14em] uppercase">Filters</PopoverTitle>
-                    <PopoverDescription className="text-[11px]">Chart layers and vessel types for map and queue.</PopoverDescription>
+                    <PopoverDescription className="text-[11px]">Infrastructure, chart layers, and vessel types.</PopoverDescription>
                 </PopoverHeader>
 
                 <div className="flex max-h-80 flex-col gap-3 overflow-y-auto p-3">
-                    <FilterSection title="Layers">
-                        {LAYER_OPTIONS.map(({ key, label }) => (
+                    <FilterSection title="Infrastructure">
+                        {infrastructure.map(({ key, label }) => (
+                            <FilterRow
+                                key={key}
+                                id={`watch-filter-layer-${key}`}
+                                label={label}
+                                checked={filters.layers[key]}
+                                onCheckedChange={(checked) => setLayer(key, checked)}
+                            />
+                        ))}
+                    </FilterSection>
+
+                    <Separator />
+
+                    <FilterSection title="Chart layers">
+                        {chart.map(({ key, label }) => (
                             <FilterRow
                                 key={key}
                                 id={`watch-filter-layer-${key}`}

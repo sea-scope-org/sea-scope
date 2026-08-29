@@ -74,7 +74,7 @@ export function watchBoardOverlayScenario(): ScenarioDefinition {
             ...scenario,
             title: 'SeaScope watch — live',
             description:
-                'Live AISStream watch board with real undersea cables and pipelines (OpenStreetMap). Enable Demo for Galaxy Leader incident tracks and theater overlays.',
+                'Live AISStream watch board with real undersea cables and pipelines (TeleGeography + EMODnet). Enable Demo for Galaxy Leader incident tracks and theater overlays.',
             centerLat: center.lat,
             centerLon: center.lon,
             zoom: 9,
@@ -93,7 +93,7 @@ export function watchBoardOverlayScenario(): ScenarioDefinition {
         protectedAssets,
         title: 'SeaScope watch — live + demo',
         description:
-            'Fused watch board: Galaxy Leader mock incident tracks (shifted into the live AIS bounding box) stream alongside AISStream positions. Real undersea cables and pipelines (OpenStreetMap), zones, and OSINT overlay the theater.',
+            'Fused watch board: Galaxy Leader mock incident tracks (shifted into the live AIS bounding box) stream alongside AISStream positions. Real undersea cables and pipelines (TeleGeography + EMODnet), zones, and OSINT overlay the theater.',
     };
 }
 

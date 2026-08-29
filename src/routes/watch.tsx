@@ -473,7 +473,6 @@ function WatchPage() {
                             zoom={zoom}
                             vessels={mapVessels}
                             highRiskZones={displayWatch.highRiskZones}
-                            protectedAssets={displayWatch.protectedAssets}
                             layers={filters.layers}
                             selectedMmsi={displayWatch.selectedMmsi}
                             focusRequest={focusRequest}

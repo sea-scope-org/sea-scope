@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Badge } from '../components/base/badge';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '../components/base/empty';
 import { cn } from '../utils/cn';
-import { assetName, LEVEL_ORDER, riskAccentClass, RiskBadge, TrendIcon } from './watchSidebarShared';
+import { useProtectedInfrastructure } from './useProtectedInfrastructure';
+import { assetName, LEVEL_ORDER, riskAccentClass, RiskBadge } from './watchSidebarShared';
 import type { OsintAlert, Vessel, WatchState } from './watchSidebarShared';
 
 export interface WatchQueueProps {
@@ -17,7 +18,7 @@ export interface WatchQueueProps {
 
 export function WatchQueue({ watch, onSelectVessel, visibleShipTypes, disabled = false }: WatchQueueProps) {
     const [osintOpen, setOsintOpen] = useState(false);
-    const assetsById = new Map(watch.protectedAssets.map((a) => [a.assetId, a]));
+    const { nameById } = useProtectedInfrastructure();
     const openAlertVessels = new Set(watch.incidents.filter((i) => i.status === 'open').map((i) => i.mmsi));
 
     const queue = [...watch.vessels]
@@ -43,7 +44,7 @@ export function WatchQueue({ watch, onSelectVessel, visibleShipTypes, disabled =
                             <QueueRow
                                 key={vessel.mmsi}
                                 vessel={vessel}
-                                asset={assetName(vessel, assetsById)}
+                                asset={assetName(vessel, nameById)}
                                 hasOpenAlert={openAlertVessels.has(vessel.mmsi)}
                                 disabled={disabled}
                                 onSelect={() => onSelectVessel(vessel.mmsi)}
@@ -135,10 +136,7 @@ function QueueRow({
                         </div>
                         {asset ? <p className="truncate text-[10px] text-primary">{asset}</p> : null}
                     </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                        <TrendIcon trend={vessel.riskTrend} />
-                        <RiskBadge level={vessel.riskLevel} score={vessel.riskScore} />
-                    </div>
+                    <RiskBadge level={vessel.riskLevel} score={vessel.riskScore} trend={vessel.riskTrend} />
                 </div>
                 {primaryReason ? <p className="mt-1 truncate text-[11px] text-muted-foreground">{primaryReason}</p> : null}
             </button>

@@ -20,9 +20,12 @@ Shared across sources:
 
 - `vesselTrackStore` — latest identity/position/track tail tagged by source; live wins on MMSI collision for 5 minutes.
 - Pure kinematic detectors (`kinematicsDetect`) that emit sticky `Anomaly` records.
-- A **rule-based risk engine** (`riskEngine`) over the fused vessel set.
-- **Real protected infrastructure** (`protectedInfrastructureCatalog`) — curated OSM cables/pipelines at true WGS84 (e.g. Nord Stream,
-  Gibraltar-region cables). Never passed through `scenarioOffsetToBbox`. Always on the board.
+- A **rule-based risk engine** (`riskEngine`) over the fused vessel set. Nearest cable/pipeline is **context only** (shown on Case /
+  preview) — proximity does not raise score; the ocean is dense with infrastructure.
+- **Real protected infrastructure** (`protectedInfrastructureCatalog`) — public TeleGeography submarine cables + EMODnet pipelines at true
+  WGS84. Refresh with `npm run infrastructure:import`. Chart loads geometries from `/maritime/protected-infrastructure.geojson` (not watch
+  SSE). Never passed through `scenarioOffsetToBbox`. Always on the board. Keep TeleGeography attribution; revisit commercial licensing
+  before productizing redistribution of their geocoded routes.
 - Galaxy Leader demo overlays (zones, OSINT, simulated radar/EO) **only while Demo is on**. Mock vessel positions and those overlays are
   mapped from Red Sea authoring coords into a **water corridor** inside `AISSTREAM_BBOX` (`aisTheaterMapPoint` / `scenarioOffsetToBbox`) so
   the ~1° Bab el-Mandeb theater fits the narrow Gibraltar channel instead of spilling onto Andalusia/Morocco.
@@ -69,17 +72,17 @@ the browser console. Heartbeats every 15s report message/position counts.
 
 ## Key files
 
-| Piece            | Path                                                                               |
-| ---------------- | ---------------------------------------------------------------------------------- |
-| Track store      | `src/server/maritime/vesselTrackStore.ts`                                          |
-| Theater mapping  | `src/server/maritime/aisTheater.ts` (`aisTheaterMapPoint`)                         |
-| Viewport union   | `src/server/maritime/aisViewportRegistry.ts`                                       |
-| Mock feeder      | `src/server/maritime/sources/mockScenarioSource.ts` (run-generation guard on stop) |
-| AISStream ingest | `src/server/maritime/aisStreamIngest.ts`                                           |
-| Fused board      | `src/server/maritime/watchBoardRuntime.ts`                                         |
-| Infrastructure   | `src/server/maritime/infrastructure/` (OSM GeoJSON catalog)                        |
-| Tick driver      | `src/server/maritime/watchBoardTickDriver.ts`                                      |
-| Persist          | `src/server/commands/aisVesselPositionPersist.ts`                                  |
-| Control          | `src/server/commands/scenarioControl.ts`, `aisViewportReport.ts`                   |
-| GraphQL          | `schema.graphqls` (`Vessel.dataSource`, `WatchState.dataSources`)                  |
-| DB               | `Vessels` / `AisPositions`                                                         |
+| Piece            | Path                                                                                                     |
+| ---------------- | -------------------------------------------------------------------------------------------------------- |
+| Track store      | `src/server/maritime/vesselTrackStore.ts`                                                                |
+| Theater mapping  | `src/server/maritime/aisTheater.ts` (`aisTheaterMapPoint`)                                               |
+| Viewport union   | `src/server/maritime/aisViewportRegistry.ts`                                                             |
+| Mock feeder      | `src/server/maritime/sources/mockScenarioSource.ts` (run-generation guard on stop)                       |
+| AISStream ingest | `src/server/maritime/aisStreamIngest.ts`                                                                 |
+| Fused board      | `src/server/maritime/watchBoardRuntime.ts`                                                               |
+| Infrastructure   | `src/server/maritime/infrastructure/` (TeleGeography + EMODnet catalog; `npm run infrastructure:import`) |
+| Tick driver      | `src/server/maritime/watchBoardTickDriver.ts`                                                            |
+| Persist          | `src/server/commands/aisVesselPositionPersist.ts`                                                        |
+| Control          | `src/server/commands/scenarioControl.ts`, `aisViewportReport.ts`                                         |
+| GraphQL          | `schema.graphqls` (`Vessel.dataSource`, `WatchState.dataSources`)                                        |
+| DB               | `Vessels` / `AisPositions`                                                                               |

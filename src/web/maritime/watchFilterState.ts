@@ -1,5 +1,10 @@
 export interface WatchLayerFilters {
-    protectedAssets: boolean;
+    /** TeleGeography submarine telecom cables. */
+    cables: boolean;
+    /** EMODnet oil / gas / chemical pipelines. */
+    pipelinesOilGas: boolean;
+    /** EMODnet water, sewage, and other non-hydrocarbon pipelines. */
+    pipelinesOther: boolean;
     highRiskZones: boolean;
     trackTails: boolean;
     radarContacts: boolean;
@@ -12,7 +17,9 @@ export interface WatchFiltersState {
 }
 
 const DEFAULT_LAYER_FILTERS: WatchLayerFilters = {
-    protectedAssets: true,
+    cables: true,
+    pipelinesOilGas: true,
+    pipelinesOther: true,
     highRiskZones: true,
     trackTails: true,
     radarContacts: true,
@@ -63,10 +70,16 @@ export function vesselPassesQueueShipTypeFilter(vessel: { shipType: string }, fi
     return filters.shipTypes.has(vessel.shipType);
 }
 
+export function watchInfrastructureLayersVisible(layers: WatchLayerFilters): boolean {
+    return layers.cables || layers.pipelinesOilGas || layers.pipelinesOther;
+}
+
 export function watchFiltersOffCount(filters: WatchFiltersState, catalog: ReadonlyArray<string>): number {
     let off = 0;
     const layers = filters.layers;
-    if (!layers.protectedAssets) off += 1;
+    if (!layers.cables) off += 1;
+    if (!layers.pipelinesOilGas) off += 1;
+    if (!layers.pipelinesOther) off += 1;
     if (!layers.highRiskZones) off += 1;
     if (!layers.trackTails) off += 1;
     if (!layers.radarContacts) off += 1;

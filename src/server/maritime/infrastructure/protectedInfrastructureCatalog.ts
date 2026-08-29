@@ -35,9 +35,7 @@ function linesFromGeometry(geometry: CatalogGeometry): LatLon[][] {
     return geometry.coordinates.map(lineToPath);
 }
 
-/** Real-WGS84 protected infrastructure — never pass through `scenarioOffsetToBbox`. */
-export function protectedInfrastructureAssets(): ProtectedAsset[] {
-    const collection = catalog as CatalogFeatureCollection;
+function assetsFromCatalog(collection: CatalogFeatureCollection): ProtectedAsset[] {
     const assets: ProtectedAsset[] = [];
 
     for (const feature of collection.features) {
@@ -64,7 +62,17 @@ export function protectedInfrastructureAssets(): ProtectedAsset[] {
     return assets;
 }
 
+const cachedAssets = assetsFromCatalog(catalog as CatalogFeatureCollection);
+
+/** Real-WGS84 protected infrastructure — never pass through `scenarioOffsetToBbox`. */
+export function protectedInfrastructureAssets(): ProtectedAsset[] {
+    return cachedAssets;
+}
+
 export function protectedInfrastructureAttribution(): string {
     const collection = catalog as CatalogFeatureCollection;
-    return collection.attribution ?? '© OpenStreetMap contributors (ODbL). Approximate public mapping, not operator as-built plans.';
+    return (
+        collection.attribution ??
+        'Submarine cables © TeleGeography. Pipelines © EMODnet Human Activities. Approximate public mapping, not operator as-built plans.'
+    );
 }

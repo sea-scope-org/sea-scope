@@ -6,7 +6,8 @@ import { Button } from '../components/base/button';
 import { Skeleton } from '../components/base/skeleton';
 import type { GqlCVesselIntelligence } from '../graphql/generated';
 import { cn } from '../utils/cn';
-import { assetName, RiskBadge, TrendIcon } from './watchSidebarShared';
+import { useProtectedInfrastructure } from './useProtectedInfrastructure';
+import { assetName, RiskBadge } from './watchSidebarShared';
 import type { Anomaly, Incident, RiskEvent, Vessel, WatchState } from './watchSidebarShared';
 
 type EvidencePanel = 'timeline' | 'anomalies';
@@ -33,8 +34,8 @@ export function WatchCase({
     onLocateOnChart,
     onAcknowledgeAlert,
 }: WatchCaseProps) {
-    const assetsById = new Map(watch.protectedAssets.map((a) => [a.assetId, a]));
-    const asset = assetName(vessel, assetsById);
+    const { nameById } = useProtectedInfrastructure();
+    const asset = assetName(vessel, nameById);
     const vesselAnomalies = watch.anomalies.filter((a) => a.mmsi === vessel.mmsi);
     const vesselRiskEvents = watch.riskEvents.filter((e) => e.mmsi === vessel.mmsi);
     const vesselIncident = watch.incidents.find((i) => i.mmsi === vessel.mmsi && i.status !== 'closed') ?? null;
@@ -68,10 +69,7 @@ export function WatchCase({
                         ) : null}
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
-                        <div className="flex items-center gap-1.5">
-                            <TrendIcon trend={vessel.riskTrend} />
-                            <RiskBadge level={vessel.riskLevel} score={vessel.riskScore} />
-                        </div>
+                        <RiskBadge level={vessel.riskLevel} score={vessel.riskScore} trend={vessel.riskTrend} />
                         {vessel.aisDark ? (
                             <Badge
                                 variant="destructive"

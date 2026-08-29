@@ -29,7 +29,7 @@ const RISK_RULE_DELTAS: Record<Exclude<RiskRule, 'baseline'>, number> = {
 const RULE_EXPLANATIONS: Record<Exclude<RiskRule, 'baseline'>, string> = {
     speedDrop: 'Sudden speed reduction detected on AIS',
     headingZigZag: 'Erratic heading changes on AIS track',
-    loitering: 'Loitering near protected infrastructure',
+    loitering: 'Loitering inside a monitored high-risk zone',
     aisDark: 'AIS transmission interrupted',
     impossibleJump: 'Impossible AIS position jump',
     zoneEntry: 'Inside monitored high-risk approach zone',
@@ -81,12 +81,32 @@ function distanceToSegmentNm(point: LatLon, a: LatLon, b: LatLon): number {
     return haversineNm(point, closest);
 }
 
+/** Rough degree pad for risk-radius bbox rejection (~1° ≈ 60 nm). */
+function assetWithinSearchBox(point: LatLon, path: ReadonlyArray<LatLon>, searchNm: number): boolean {
+    if (path.length === 0) return false;
+    const padDeg = searchNm / 60 + 0.05;
+    let minLat = path[0]!.lat;
+    let maxLat = path[0]!.lat;
+    let minLon = path[0]!.lon;
+    let maxLon = path[0]!.lon;
+    for (let i = 1; i < path.length; i++) {
+        const p = path[i]!;
+        if (p.lat < minLat) minLat = p.lat;
+        if (p.lat > maxLat) maxLat = p.lat;
+        if (p.lon < minLon) minLon = p.lon;
+        if (p.lon > maxLon) maxLon = p.lon;
+    }
+    return point.lat >= minLat - padDeg && point.lat <= maxLat + padDeg && point.lon >= minLon - padDeg && point.lon <= maxLon + padDeg;
+}
+
 export function nearestProtectedAsset(
     point: LatLon,
     assets: ReadonlyArray<ProtectedAsset>,
 ): { asset: ProtectedAsset; distanceNm: number } | null {
     let best: { asset: ProtectedAsset; distanceNm: number } | null = null;
     for (const asset of assets) {
+        const searchNm = Math.max(asset.riskRadiusNm * 2, 30);
+        if (!assetWithinSearchBox(point, asset.path, searchNm)) continue;
         const distanceNm = distanceToPolylineNm(point, asset.path);
         if (!best || distanceNm < best.distanceNm) {
             best = { asset, distanceNm };
@@ -159,20 +179,12 @@ function riskFactorsCompute(input: RiskComputeInput): {
     }
 
     if (input.position) {
+        // Nearest cable/pipeline is chart context only — oceans are dense with infra,
+        // so proximity alone must not raise risk. Combine with abnormal behavior later if needed.
         const nearest = nearestProtectedAsset(input.position, input.protectedAssets);
         if (nearest) {
             nearestAssetId = nearest.asset.assetId;
             nearestAssetDistanceNm = nearest.distanceNm;
-            const slowOrLoitering = input.stickyKinds.has('loitering') || (input.sogKn !== null && input.sogKn <= 3);
-            if (nearest.distanceNm <= nearest.asset.riskRadiusNm && slowOrLoitering) {
-                factors.push(
-                    factor(
-                        'nearProtectedAsset',
-                        `asset:${nearest.asset.assetId}`,
-                        `Within ${nearest.distanceNm.toFixed(2)} nm of ${nearest.asset.name}`,
-                    ),
-                );
-            }
         }
     }
 

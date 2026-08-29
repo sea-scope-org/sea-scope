@@ -14,7 +14,6 @@ const NavalMapClient = lazy(async () => {
 type WatchState = GqlCWatchFieldsFragment;
 type Vessel = WatchState['vessels'][number];
 type HighRiskZone = WatchState['highRiskZones'][number];
-type ProtectedAsset = WatchState['protectedAssets'][number];
 
 export interface NavalMapProps {
     centerLat: number;
@@ -22,7 +21,6 @@ export interface NavalMapProps {
     zoom: number;
     vessels: ReadonlyArray<Vessel>;
     highRiskZones: ReadonlyArray<HighRiskZone>;
-    protectedAssets: ReadonlyArray<ProtectedAsset>;
     layers: WatchLayerFilters;
     selectedMmsi: string | null | undefined;
     focusRequest: NavalMapFocusRequest | null;

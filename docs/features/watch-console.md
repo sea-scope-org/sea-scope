@@ -12,12 +12,13 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
    **off by default** — enable it with the toolbar **Demo** button (`mockAisSetEnabled`). The button flips immediately (optimistic pressed
    state + in-flight lock). While Demo is off — including after the mutation settles — the client always hides mock contacts and theater
    overlays so a late feeder tick cannot flicker demo content back on. Turning Demo off only restores chart overview when Case was on a demo
-   contact. Real undersea cables and pipelines (OpenStreetMap, true WGS84) stay on the chart either way. While Demo is off, high-risk zones,
-   simulated radar, and theater OSINT are hidden so live traffic is not scored against demo-only geometry. Toolbar badges show live (and
-   demo, when on) vessel counts. **Reset** clears selection / risk stickies for the session.
-4. Toolbar **Filters** toggles chart layers (protected assets, high-risk zones, track tails, radar contacts) and vessel `shipType`s. Filters
-   are client-only and shared by the chart, Queue, and toolbar band counts (all on by default; **Show all** resets). A vessel already in
-   **Case** stays on the map if its type is unchecked; Queue still hides unchecked types.
+   contact. Real undersea cables and pipelines (TeleGeography + EMODnet, true WGS84) stay on the chart either way. While Demo is off,
+   high-risk zones, simulated radar, and theater OSINT are hidden so live traffic is not scored against demo-only geometry. Toolbar badges
+   show live (and demo, when on) vessel counts. **Reset** clears selection / risk stickies for the session.
+4. Toolbar **Filters** toggles infrastructure types (submarine cables, oil & gas pipelines, other pipelines), chart layers (high-risk zones,
+   track tails, radar contacts), and vessel `shipType`s. Filters are client-only and shared by the chart, Queue, and toolbar band counts
+   (all on by default; **Show all** resets). A vessel already in **Case** stays on the map if its type is unchecked; Queue still hides
+   unchecked types.
 5. Vessel marker color identifies the vessel family while an independent, discrete halo communicates elevated risk (none for Green, subtle
    Yellow, stronger Orange, and a slow pulsing Red). Heading, selection outline, and freshness opacity remain separate encodings. Protected
    assets are drawn (navy solid cables, dashed bronze pipelines, with name labels from zoom 5+). Selecting a vessel opens **Case** mode in
@@ -33,13 +34,15 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
    only strengthen the marker highlight. Open-incident focus gets a one-shot arrival ring. The camera never tracks live AIS ticks.
 8. Live ticks / anomalies / AI briefs arrive over `sessionUpdates` (imperative URQL subscription).
 9. Sidebar **Queue** (no selection): one ranked attention list (open Red incidents first, then red → orange → yellow), respecting ship-type
-   filters. Theater OSINT is a collapsed disclosure at the bottom. Band counts live in the toolbar, not the rail.
+   filters. Each row shows risk level + score with the trend arrow inside the same pill (rising ↑ / falling ↓ / stable →). Theater OSINT is a
+   collapsed disclosure at the bottom. Band counts live in the toolbar, not the rail.
 10. Sidebar **Case** (vessel selected): sticky on `selectedMmsi` — if the contact drops off the live board, Case keeps the last-known vessel
-    (with a short note) instead of silently returning to Queue. Sticky identity + Why now (top factors) + primary **Request briefing** /
-    Acknowledge / Locate on chart. The **Intelligence** stage sits below the actions (always visible): empty CTA, shimmer skeleton while
-    waiting, then progressive structured fields as they stream. Evidence tabs below are Timeline | Anomalies only. Timeline merges
-    risk-score changes and incident events. OSINT is not shown in Case. **Back to queue** clears selection optimistically (Queue appears
-    immediately; chart overview restores without waiting on `vesselSelect`) and locks queue picks until the mutation settles.
+    (with a short note) instead of silently returning to Queue. Sticky identity + risk pill (level, score, trend) + Why now (top factors) +
+    primary **Request briefing** / Acknowledge / Locate on chart. The **Intelligence** stage sits below the actions (always visible): empty
+    CTA, shimmer skeleton while waiting, then progressive structured fields as they stream. Evidence tabs below are Timeline | Anomalies
+    only. Timeline merges risk-score changes and incident events. OSINT is not shown in Case. **Back to queue** clears selection
+    optimistically (Queue appears immediately; chart overview restores without waiting on `vesselSelect`) and locks queue picks until the
+    mutation settles.
 11. **Request briefing** ACKs via `vesselIntelligenceRequest`, then streams partial `SessionUpdateIntelligence` payloads (`complete: false`)
     until the final brief (`complete: true`). One shimmer status in the Intelligence stage (no header/button spinners). Toast on start
     failure / timeout; Gemini failures may still publish a stub brief.
@@ -99,16 +102,17 @@ Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory p
 | Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                                                                                                 |
 | Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `VesselMarker.tsx` + `VesselPreview.tsx` + `vesselVisuals.ts` + `navalChartTint.ts` + `navalMapFocus.ts`                                       |
 | Toolbar            | `src/web/maritime/WatchToolbar.tsx` (risk bands, alerts, Demo toggle, Filters)                                                                                                                          |
-| Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (layers + ship types; owned in `watch.tsx`)                                                                                                 |
+| Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (infrastructure types + chart layers + ship types; owned in `watch.tsx`)                                                                    |
 | Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail)                                                                              |
 | Shared rail bits   | `src/web/maritime/watchSidebarShared.tsx`                                                                                                                                                               |
 | Layout shell       | `SidebarProvider` + `SidebarInset` in `watch.tsx`                                                                                                                                                       |
 | Server watch board | `src/server/maritime/*`, session mutations in schema                                                                                                                                                    |
-| Protected assets   | `src/server/maritime/infrastructure/` — curated OSM GeoJSON (Nord Stream, Gibraltar-region cables); never theater-offset                                                                                |
+| Protected assets   | `src/server/maritime/infrastructure/` — TeleGeography cables + EMODnet pipelines (`npm run infrastructure:import`); chart loads `/maritime/protected-infrastructure.geojson`; never theater-offset      |
 | Multi-source AIS   | `vesselTrackStore.ts`, `sources/mockScenarioSource.ts`, `aisStreamIngest.ts`, `aisViewportRegistry.ts`, `watchBoardRuntime.ts`, `aisTheater.ts` (water-corridor map); tables `Vessels` / `AisPositions` |
 
 Basemap: Carto Positron (`basemaps.cartocdn.com/gl/positron-gl-style`) + warm chart tint on load. Scenario id: `galaxy-leader`. Protected
-asset geometries © OpenStreetMap contributors (ODbL); approximate public mapping, not operator as-built plans.
+asset geometries © TeleGeography (submarinecablemap.com) and EMODnet Human Activities; approximate public mapping, not operator as-built
+plans.
 
 Risk bands: Green 0–29, Yellow 30–59, Orange 60–79, Red 80–100. Red opens an in-memory `Incident`; `alertAcknowledge` clears the active
 alert. Mutations: `vesselSelect`, `vesselIntelligenceRequest`, `alertAcknowledge`, `scenarioReset`. Vessel intelligence streams via

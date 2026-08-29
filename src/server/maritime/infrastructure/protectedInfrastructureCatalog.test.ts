@@ -2,34 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { protectedInfrastructureAssets, protectedInfrastructureAttribution } from './protectedInfrastructureCatalog';
 
 describe('protectedInfrastructureCatalog', () => {
-    it('loads real-WGS84 cables and pipelines without theater offset', () => {
+    it('loads a full public cable and pipeline catalog at true WGS84', () => {
         const assets = protectedInfrastructureAssets();
-        const names = new Set(assets.map((a) => a.name));
+        const cables = assets.filter((a) => a.type === 'cable');
+        const pipelines = assets.filter((a) => a.type === 'pipeline');
 
-        expect(names.has('Nord Stream')).toBe(true);
-        expect(names.has('Nord Stream 2')).toBe(true);
-        expect(names.has('FLAG Europe-Asia')).toBe(true);
-        expect(names.has('Gibraltar Strait submarine cables')).toBe(true);
+        expect(cables.length).toBeGreaterThan(500);
+        expect(pipelines.length).toBeGreaterThan(2000);
 
-        const nordStream = assets.filter((a) => a.name === 'Nord Stream');
+        const nordStream = pipelines.filter((a) => /nord stream/i.test(a.name));
         expect(nordStream.length).toBeGreaterThan(0);
-        expect(nordStream.every((a) => a.type === 'pipeline')).toBe(true);
-
-        // Baltic — must not sit near Gibraltar after a mistaken theater offset.
         const sample = nordStream[0]!.path[0]!;
         expect(sample.lat).toBeGreaterThan(54);
         expect(sample.lon).toBeGreaterThan(10);
 
-        const gibraltarCables = assets.filter((a) => a.name === 'Gibraltar Strait submarine cables');
-        expect(gibraltarCables.length).toBeGreaterThan(0);
-        const g = gibraltarCables[0]!.path[0]!;
-        expect(g.lat).toBeGreaterThan(35);
-        expect(g.lat).toBeLessThan(37);
-        expect(g.lon).toBeGreaterThan(-7);
-        expect(g.lon).toBeLessThan(-4);
+        const gibraltarArea = cables.filter((a) => a.path.some((p) => p.lat > 35 && p.lat < 37 && p.lon > -7 && p.lon < -4));
+        expect(gibraltarArea.length).toBeGreaterThan(0);
     });
 
-    it('exposes OSM attribution', () => {
-        expect(protectedInfrastructureAttribution()).toMatch(/OpenStreetMap/);
+    it('exposes TeleGeography + EMODnet attribution', () => {
+        expect(protectedInfrastructureAttribution()).toMatch(/TeleGeography/);
+        expect(protectedInfrastructureAttribution()).toMatch(/EMODnet/);
     });
 });

@@ -20,6 +20,7 @@
         "db:pull": "drizzle-kit pull",
         "db:studio": "drizzle-kit studio",
         "graphql:generate": "graphql-codegen --config codegen.ts",
+        "infrastructure:import": "tsx scripts/protectedInfrastructureImport.ts",
         "lint": "eslint . --fix",
         "lint:check": "eslint .",
         "spell:check": "cspell . --no-progress --dot",

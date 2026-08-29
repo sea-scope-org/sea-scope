@@ -141,4 +141,24 @@ describe('riskCompute', () => {
         expect(result.activeFactors.some((f) => f.rule === 'aisRadarMismatch')).toBe(true);
         expect(result.radarPosition).toEqual({ lat: 14.45, lon: 42.48 });
     });
+
+    it('does not raise risk for proximity to cables or pipelines alone', () => {
+        const result = riskCompute({
+            mmsi: '1',
+            simMs: 0,
+            position: { lat: 14.4, lon: 42.4 },
+            sogKn: 0.5,
+            aisDark: false,
+            inHighRiskZone: false,
+            stickyKinds: new Set(['loitering']),
+            protectedAssets: [cable],
+            simulatedObservations: [],
+            previousScore: RISK_BASELINE,
+        });
+        expect(result.nearestAssetId).toBe('cable-c17');
+        expect(result.nearestAssetDistanceNm).toBeLessThan(cable.riskRadiusNm);
+        expect(result.activeFactors.some((f) => f.rule === 'nearProtectedAsset')).toBe(false);
+        expect(result.activeFactors.some((f) => f.rule === 'loitering')).toBe(true);
+        expect(result.riskScore).toBe(RISK_BASELINE + 22);
+    });
 });

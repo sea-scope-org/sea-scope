@@ -1310,13 +1310,6 @@ export type GqlCWatchFieldsFragment = {
     }>;
     osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
     highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
-    protectedAssets: Array<{
-        assetId: string;
-        name: string;
-        type: Schema.GqlCProtectedAssetType;
-        riskRadiusNm: number;
-        path: Array<{ lat: number; lon: number }>;
-    }>;
 };
 
 export type GqlCWatchPageQueryVariables = Exact<{ [key: string]: never }>;
@@ -1392,13 +1385,6 @@ export type GqlCWatchPageQuery = {
             }>;
             osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
             highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
-            protectedAssets: Array<{
-                assetId: string;
-                name: string;
-                type: Schema.GqlCProtectedAssetType;
-                riskRadiusNm: number;
-                path: Array<{ lat: number; lon: number }>;
-            }>;
         };
         scenarios: Array<{ scenarioId: string; title: string; description: string }>;
     };
@@ -1478,13 +1464,6 @@ export type GqlCVesselSelectMutation = {
             }>;
             osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
             highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
-            protectedAssets: Array<{
-                assetId: string;
-                name: string;
-                type: Schema.GqlCProtectedAssetType;
-                riskRadiusNm: number;
-                path: Array<{ lat: number; lon: number }>;
-            }>;
         } | null;
     };
 };
@@ -1571,13 +1550,6 @@ export type GqlCAlertAcknowledgeMutation = {
             }>;
             osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
             highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
-            protectedAssets: Array<{
-                assetId: string;
-                name: string;
-                type: Schema.GqlCProtectedAssetType;
-                riskRadiusNm: number;
-                path: Array<{ lat: number; lon: number }>;
-            }>;
         } | null;
     };
 };
@@ -1654,13 +1626,6 @@ export type GqlCScenarioResetMutation = {
             }>;
             osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
             highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
-            protectedAssets: Array<{
-                assetId: string;
-                name: string;
-                type: Schema.GqlCProtectedAssetType;
-                riskRadiusNm: number;
-                path: Array<{ lat: number; lon: number }>;
-            }>;
         } | null;
     };
 };
@@ -1739,13 +1704,6 @@ export type GqlCMockAisSetEnabledMutation = {
             }>;
             osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
             highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
-            protectedAssets: Array<{
-                assetId: string;
-                name: string;
-                type: Schema.GqlCProtectedAssetType;
-                riskRadiusNm: number;
-                path: Array<{ lat: number; lon: number }>;
-            }>;
         } | null;
     };
 };
@@ -1864,13 +1822,6 @@ export type GqlCSessionUpdatesSubscription = {
                   }>;
                   osintAlerts: Array<{ alertId: string; source: string; title: string; body: string; region: string }>;
                   highRiskZones: Array<{ zoneId: string; name: string; ring: Array<{ lat: number; lon: number }> }>;
-                  protectedAssets: Array<{
-                      assetId: string;
-                      name: string;
-                      type: Schema.GqlCProtectedAssetType;
-                      riskRadiusNm: number;
-                      path: Array<{ lat: number; lon: number }>;
-                  }>;
               };
           };
 };
@@ -2615,30 +2566,6 @@ export const WatchFieldsFragmentDoc = {
                                 {
                                     kind: 'Field',
                                     name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'protectedAssets' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'assetId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'riskRadiusNm' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'path' },
                                     selectionSet: {
                                         kind: 'SelectionSet',
                                         selections: [
@@ -4378,30 +4305,6 @@ export const WatchPageDocument = {
                             ],
                         },
                     },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'protectedAssets' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'assetId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'riskRadiusNm' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'path' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
-                            ],
-                        },
-                    },
                 ],
             },
         },
@@ -4641,30 +4544,6 @@ export const VesselSelectDocument = {
                                 {
                                     kind: 'Field',
                                     name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'protectedAssets' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'assetId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'riskRadiusNm' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'path' },
                                     selectionSet: {
                                         kind: 'SelectionSet',
                                         selections: [
@@ -4975,30 +4854,6 @@ export const AlertAcknowledgeDocument = {
                             ],
                         },
                     },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'protectedAssets' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'assetId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'riskRadiusNm' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'path' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
-                            ],
-                        },
-                    },
                 ],
             },
         },
@@ -5224,30 +5079,6 @@ export const ScenarioResetDocument = {
                                 {
                                     kind: 'Field',
                                     name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'protectedAssets' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'assetId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'riskRadiusNm' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'path' },
                                     selectionSet: {
                                         kind: 'SelectionSet',
                                         selections: [
@@ -5498,30 +5329,6 @@ export const MockAisSetEnabledDocument = {
                                 {
                                     kind: 'Field',
                                     name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'protectedAssets' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'assetId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'riskRadiusNm' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'path' },
                                     selectionSet: {
                                         kind: 'SelectionSet',
                                         selections: [
@@ -5945,30 +5752,6 @@ export const SessionUpdatesDocument = {
                                 {
                                     kind: 'Field',
                                     name: { kind: 'Name', value: 'ring' },
-                                    selectionSet: {
-                                        kind: 'SelectionSet',
-                                        selections: [
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lat' } },
-                                            { kind: 'Field', name: { kind: 'Name', value: 'lon' } },
-                                        ],
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                    {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'protectedAssets' },
-                        selectionSet: {
-                            kind: 'SelectionSet',
-                            selections: [
-                                { kind: 'Field', name: { kind: 'Name', value: 'assetId' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                                { kind: 'Field', name: { kind: 'Name', value: 'riskRadiusNm' } },
-                                {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'path' },
                                     selectionSet: {
                                         kind: 'SelectionSet',
                                         selections: [
