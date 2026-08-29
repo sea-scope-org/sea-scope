@@ -4,8 +4,8 @@ import { Button } from '../components/base/button';
 import { Sidebar, SidebarContent, SidebarHeader } from '../components/base/sidebar';
 import type { GqlCVesselIntelligence, GqlCWatchFieldsFragment } from '../graphql/generated';
 import { WatchCase } from './WatchCase';
-import type { Vessel } from './watchSidebarShared';
 import { WatchQueue } from './WatchQueue';
+import type { Vessel } from './watchSidebarShared';
 
 export interface IntelligenceSidebarProps {
     watch: GqlCWatchFieldsFragment | null;
@@ -39,29 +39,25 @@ export function IntelligenceSidebar({
     const liveVessel = selectedMmsi ? (watch?.vessels.find((v) => v.mmsi === selectedMmsi) ?? null) : null;
 
     const [cachedVessel, setCachedVessel] = useState<Vessel | null>(null);
-    const cachedMmsiRef = useRef<string | null>(null);
 
     useEffect(() => {
         if (liveVessel) {
-            cachedMmsiRef.current = liveVessel.mmsi;
             setCachedVessel(liveVessel);
             return;
         }
         if (!selectedMmsi) {
-            cachedMmsiRef.current = null;
             setCachedVessel(null);
         }
     }, [liveVessel, selectedMmsi]);
 
-    const vessel =
-        liveVessel ?? (selectedMmsi && cachedVessel?.mmsi === selectedMmsi ? cachedVessel : null);
+    const vessel = liveVessel ?? (selectedMmsi && cachedVessel?.mmsi === selectedMmsi ? cachedVessel : null);
     const contactMissing = Boolean(selectedMmsi && !liveVessel && vessel);
     // Stay in Case whenever a selection exists — never silently dump to Queue.
     const inCase = Boolean(watch && selectedMmsi);
 
     return (
         <Sidebar side="right" collapsible="offcanvas" className={className}>
-            <SidebarHeader className="flex-row items-center gap-2 border-b border-sidebar-border px-4 py-3">
+            <SidebarHeader className="flex-row items-center gap-2 px-4 py-3">
                 <RadarIcon className="size-4 text-primary" aria-hidden />
                 <h2 className="text-xs font-semibold tracking-[0.14em] text-foreground uppercase">{inCase ? 'Case' : 'Queue'}</h2>
                 {inCase ? (

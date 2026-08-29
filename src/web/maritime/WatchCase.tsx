@@ -1,5 +1,5 @@
 import { ChevronDownIcon, LocateFixedIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge } from '../components/base/badge';
 import { Button } from '../components/base/button';
 import { Spinner } from '../components/base/spinner';
@@ -13,6 +13,8 @@ type EvidencePanel = 'timeline' | 'anomalies' | 'brief';
 export interface WatchCaseProps {
     watch: WatchState;
     vessel: Vessel;
+    /** True when showing a last-known vessel that is no longer on the live board. */
+    contactMissing?: boolean;
     intelligence: GqlCVesselIntelligence | null;
     intelligenceBusy: boolean;
     onRequestIntelligence: (mmsi: string) => void;
@@ -23,6 +25,7 @@ export interface WatchCaseProps {
 export function WatchCase({
     watch,
     vessel,
+    contactMissing = false,
     intelligence,
     intelligenceBusy,
     onRequestIntelligence,
@@ -40,11 +43,25 @@ export function WatchCase({
         hasOpenIncident: vesselIncident?.status === 'open',
         riskEventCount: vesselRiskEvents.length,
         hasBrief: Boolean(briefForSelection),
+        intelligenceBusy,
     });
     const [panel, setPanel] = useState<EvidencePanel>(defaultPanel);
     const [navOpen, setNavOpen] = useState(false);
 
+    useEffect(() => {
+        if (intelligenceBusy) setPanel('brief');
+    }, [intelligenceBusy]);
+
+    useEffect(() => {
+        if (briefForSelection) setPanel('brief');
+    }, [briefForSelection]);
+
     const factors = [...vessel.activeFactors].reverse().slice(0, 3);
+
+    const requestBriefing = () => {
+        setPanel('brief');
+        onRequestIntelligence(vessel.mmsi);
+    };
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
@@ -79,6 +96,17 @@ export function WatchCase({
                     </div>
                 </div>
 
+                {contactMissing ? (
+                    <p className="text-[11px] text-amber-800">Contact left the live board — showing last known state.</p>
+                ) : null}
+
+                {intelligenceBusy ? (
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <Spinner className="size-3.5" aria-hidden />
+                        Generating briefing…
+                    </div>
+                ) : null}
+
                 <div>
                     <button
                         type="button"
@@ -109,22 +137,7 @@ export function WatchCase({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                    {vesselIncident?.status === 'open' ? (
-                        <Button type="button" size="xs" variant="destructive" onClick={() => onAcknowledgeAlert(vesselIncident.incidentId)}>
-                            Acknowledge
-                        </Button>
-                    ) : null}
-                    <Button type="button" size="xs" variant="outline" onClick={onLocateOnChart}>
-                        <LocateFixedIcon data-icon="inline-start" aria-hidden />
-                        Locate on chart
-                    </Button>
-                    <Button
-                        type="button"
-                        size="xs"
-                        variant="outline"
-                        disabled={intelligenceBusy}
-                        onClick={() => onRequestIntelligence(vessel.mmsi)}
-                    >
+                    <Button type="button" size="xs" disabled={intelligenceBusy || contactMissing} onClick={requestBriefing}>
                         {intelligenceBusy ? (
                             <>
                                 <Spinner data-icon="inline-start" aria-hidden />
@@ -133,6 +146,15 @@ export function WatchCase({
                         ) : (
                             'Request briefing'
                         )}
+                    </Button>
+                    {vesselIncident?.status === 'open' ? (
+                        <Button type="button" size="xs" variant="destructive" onClick={() => onAcknowledgeAlert(vesselIncident.incidentId)}>
+                            Acknowledge
+                        </Button>
+                    ) : null}
+                    <Button type="button" size="xs" variant="outline" onClick={onLocateOnChart} disabled={contactMissing}>
+                        <LocateFixedIcon data-icon="inline-start" aria-hidden />
+                        Locate on chart
                     </Button>
                 </div>
             </div>
@@ -149,9 +171,14 @@ export function WatchCase({
     );
 }
 
-function resolveDefaultPanel(input: { hasOpenIncident: boolean; riskEventCount: number; hasBrief: boolean }): EvidencePanel {
+function resolveDefaultPanel(input: {
+    hasOpenIncident: boolean;
+    riskEventCount: number;
+    hasBrief: boolean;
+    intelligenceBusy: boolean;
+}): EvidencePanel {
+    if (input.intelligenceBusy || input.hasBrief) return 'brief';
     if (input.hasOpenIncident || input.riskEventCount > 0) return 'timeline';
-    if (input.hasBrief) return 'brief';
     return 'timeline';
 }
 

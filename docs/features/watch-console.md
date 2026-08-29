@@ -31,13 +31,16 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 8. Live ticks / anomalies / AI briefs arrive over `sessionUpdates` (imperative URQL subscription).
 9. Sidebar **Queue** (no selection): one ranked attention list (open Red incidents first, then red → orange → yellow), respecting ship-type
    filters. Theater OSINT is a collapsed disclosure at the bottom. Band counts live in the toolbar, not the rail.
-10. Sidebar **Case** (vessel selected): sticky identity + Why now (top factors) + Acknowledge / Locate on chart / Request briefing; evidence
-    is one panel at a time (Timeline | Anomalies | Brief). Timeline merges risk-score changes and incident events. OSINT is not shown in
-    Case. **Back to queue** clears selection optimistically (Queue appears immediately; chart overview restores without waiting on
+10. Sidebar **Case** (vessel selected): sticky on `selectedMmsi` — if the contact drops off the live board, Case keeps the last-known vessel
+    (with a short note) instead of silently returning to Queue. Sticky identity + Why now (top factors) + primary **Request briefing** /
+    Acknowledge / Locate on chart; evidence is one panel at a time (Timeline | Anomalies | Brief). Requesting a briefing (or receiving one)
+    opens the Brief panel; progress also shows in the Case header. Timeline merges risk-score changes and incident events. OSINT is not
+    shown in Case. **Back to queue** clears selection optimistically (Queue appears immediately; chart overview restores without waiting on
     `vesselSelect`) and locks queue picks until the mutation settles.
 11. **Request briefing** ACKs via `vesselIntelligenceRequest` then shows progress until `SessionUpdateIntelligence` (toast on start failure
     / timeout; Gemini failures may still publish a stub brief).
-12. When the demo stream is on, the first high/critical anomaly auto-selects Galaxy Leader (`538090574`) once and focuses the chart.
+12. When the demo stream is on, the first high/critical anomaly auto-selects Galaxy Leader (`538090574`) once and focuses the chart — only
+    when Demo is on, no Case is open, no briefing is in flight, and Galaxy Leader is present on the board.
 13. When the demo scenario reaches the end, it loops so the board stays live.
 
 ## Options considered

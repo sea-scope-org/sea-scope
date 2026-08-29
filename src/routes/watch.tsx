@@ -90,6 +90,10 @@ function WatchPage() {
 
     const applyWatchRef = useRef<(watch: GqlCWatchFieldsFragment | null) => void>(() => undefined);
     const requestChartFocusRef = useRef<(mmsi: string | null, arrivalPulse: boolean) => void>(() => undefined);
+    const mockEnabledRef = useRef(false);
+    const selectedMmsiRef = useRef<string | null>(null);
+    const intelligenceBusyRef = useRef(false);
+    const vesselsRef = useRef<GqlCWatchFieldsFragment['vessels']>([]);
 
     const requestChartFocus = useCallback((mmsi: string | null, arrivalPulse: boolean) => {
         focusGenerationRef.current += 1;
@@ -105,14 +109,23 @@ function WatchPage() {
         (anomaly: GqlCWatchFieldsFragment['anomalies'][number]) => {
             if (autoSelectedRef.current) return;
             if (anomaly.severity !== 'critical' && anomaly.severity !== 'high') return;
+            // Demo narrative only: never steal an open Case or interrupt a briefing,
+            // and never select Galaxy Leader when it is not on the board.
+            if (!mockEnabledRef.current) return;
+            if (selectedMmsiRef.current) return;
+            if (intelligenceBusyRef.current) return;
+            if (!vesselsRef.current.some((vessel) => vessel.mmsi === GALAXY_LEADER_MMSI)) return;
+
             autoSelectedRef.current = true;
             void (async () => {
                 const result = await vesselSelect({ mmsi: GALAXY_LEADER_MMSI });
                 const next = result.data?.session.vesselSelect;
-                if (next) {
-                    applyWatchRef.current(next);
-                    requestChartFocusRef.current(GALAXY_LEADER_MMSI, vesselHasOpenIncident(next, GALAXY_LEADER_MMSI));
+                if (!next?.vessels.some((vessel) => vessel.mmsi === GALAXY_LEADER_MMSI)) {
+                    autoSelectedRef.current = false;
+                    return;
                 }
+                applyWatchRef.current(next);
+                requestChartFocusRef.current(GALAXY_LEADER_MMSI, vesselHasOpenIncident(next, GALAXY_LEADER_MMSI));
             })();
         },
         [vesselSelect],
@@ -127,6 +140,9 @@ function WatchPage() {
     const liveWatch = watch ?? seedWatch;
     const serverMockEnabled = liveWatch.dataSources.find((source) => source.id === 'mock')?.enabled ?? false;
     const mockEnabled = mockEnabledOverride ?? serverMockEnabled;
+    mockEnabledRef.current = mockEnabled;
+    intelligenceBusyRef.current = intelligenceBusy;
+    vesselsRef.current = liveWatch.vessels;
 
     // While Demo is toggling, keep the chrome honest immediately: button + badges flip
     // now; on disable, drop mock contacts / theater overlays before the mutation returns.
@@ -178,6 +194,8 @@ function WatchPage() {
 
         return next;
     }, [liveWatch, mockEnabledOverride, selectedMmsiOverride]);
+
+    selectedMmsiRef.current = displayWatch.selectedMmsi ?? null;
 
     const shipTypeCatalog = useMemo(() => watchShipTypesFromVessels(displayWatch.vessels), [displayWatch.vessels]);
     const shipTypeCatalogKey = shipTypeCatalog.join('\0');
