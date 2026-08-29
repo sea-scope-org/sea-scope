@@ -42,6 +42,8 @@ docs/
 │   ├── watch-console.md          # Watch console (chart + attention sidebar + risk)
 │   ├── seascope.md               # Product overview (maritime security copilot MVP)
 │   └── …
+├── marketing/                    # Pitch and go-to-market narratives (not product specs)
+│   └── pitch.md                  # ~3 min partner pitch (one problem → meaning + presence → same engine)
 └── assets/                       # Diagrams, images, and other media (may be empty)
 ```
 
@@ -95,6 +97,12 @@ convention is established.
 ### `infrastructure.md`
 
 Deployment pipeline, CI configuration, environment setup. Update it when the deployment or CI process changes.
+
+### `marketing/`
+
+Go-to-market and partner narratives (pitches, story spines). These are not feature or architecture specs — keep them aligned with product
+promise language in [`features/seascope.md`](./features/seascope.md), but they may describe future partner capabilities that are not yet
+implemented.
 
 ### `assets/`
 
