@@ -121,7 +121,7 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
                         <WeightIcon className="size-3.5" aria-hidden />
                         {familyMeta.label} profile
                     </span>
-                    <span className="font-medium text-foreground">Click for evidence</span>
+                    <span className="font-medium text-foreground">Evidence</span>
                 </div>
             </div>
         </div>
