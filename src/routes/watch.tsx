@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import type { CSSProperties } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useMutation } from 'urql';
 import { SidebarInset, SidebarProvider } from '../web/components/base/sidebar';
@@ -16,6 +16,14 @@ import { routeLoaderGraphqlClient } from '../web/graphql/routeLoaderGraphqlClien
 import { IntelligenceSidebar } from '../web/maritime/IntelligenceSidebar';
 import { NavalMap } from '../web/maritime/NavalMap';
 import { useSessionUpdates } from '../web/maritime/useSessionUpdates';
+import type { WatchFiltersState } from '../web/maritime/watchFilterState';
+import {
+    vesselPassesQueueShipTypeFilter,
+    vesselPassesShipTypeFilter,
+    watchFiltersCreate,
+    watchFiltersReconcile,
+    watchShipTypesFromVessels,
+} from '../web/maritime/watchFilterState';
 import { WatchToolbar } from '../web/maritime/WatchToolbar';
 import { seoMeta } from '../web/seo/seoMeta';
 import { webPageUrlGet } from '../web/seo/webPageUrlGet';
@@ -76,6 +84,30 @@ function WatchPage() {
     });
     applyWatchRef.current = applyWatch;
 
+    const liveWatch = watch ?? seedWatch;
+
+    const shipTypeCatalog = useMemo(() => watchShipTypesFromVessels(liveWatch.vessels), [liveWatch.vessels]);
+    const shipTypeCatalogKey = shipTypeCatalog.join('\0');
+    const previousCatalogRef = useRef<string[]>(shipTypeCatalog);
+    const [filters, setFilters] = useState<WatchFiltersState>(() => watchFiltersCreate(shipTypeCatalog));
+
+    useEffect(() => {
+        const previous = previousCatalogRef.current;
+        const catalog = shipTypeCatalogKey.length > 0 ? shipTypeCatalogKey.split('\0') : [];
+        setFilters((current) => watchFiltersReconcile(current, catalog, previous));
+        previousCatalogRef.current = catalog;
+    }, [shipTypeCatalogKey]);
+
+    const countedVessels = useMemo(
+        () => liveWatch.vessels.filter((v) => vesselPassesQueueShipTypeFilter(v, filters)),
+        [filters, liveWatch.vessels],
+    );
+
+    const mapVessels = useMemo(
+        () => liveWatch.vessels.filter((v) => vesselPassesShipTypeFilter(v, filters, liveWatch.selectedMmsi)),
+        [filters, liveWatch.selectedMmsi, liveWatch.vessels],
+    );
+
     const onSelect = useCallback(
         async (mmsi: string) => {
             clearIntelligence();
@@ -127,8 +159,6 @@ function WatchPage() {
         [clearIntelligence, vesselIntelligenceRequest],
     );
 
-    const liveWatch = watch ?? seedWatch;
-
     useEffect(() => {
         if (!intelligenceBusy || !intelligence) return;
         if (intelligence.mmsi === liveWatch.selectedMmsi) {
@@ -153,16 +183,24 @@ function WatchPage() {
         <div className="h-dvh overflow-hidden bg-background text-foreground">
             <SidebarProvider className="h-full min-h-0!" style={WATCH_SIDEBAR_STYLE}>
                 <SidebarInset id="main-content" className="min-h-0 overflow-hidden bg-background">
-                    <WatchToolbar watch={liveWatch} onReset={onReset} />
+                    <WatchToolbar
+                        watch={liveWatch}
+                        countedVessels={countedVessels}
+                        filters={filters}
+                        shipTypeCatalog={shipTypeCatalog}
+                        onFiltersChange={setFilters}
+                        onReset={onReset}
+                    />
                     <div className="relative min-h-0 min-w-0 flex-1">
                         <NavalMap
                             key={liveWatch.scenarioId}
                             centerLat={centerLat}
                             centerLon={centerLon}
                             zoom={zoom}
-                            vessels={liveWatch.vessels}
+                            vessels={mapVessels}
                             highRiskZones={liveWatch.highRiskZones}
                             protectedAssets={liveWatch.protectedAssets}
+                            layers={filters.layers}
                             selectedMmsi={liveWatch.selectedMmsi}
                             onSelect={onSelect}
                         />
@@ -177,6 +215,7 @@ function WatchPage() {
                     onSelectVessel={onSelect}
                     onAcknowledgeAlert={onAcknowledgeAlert}
                     onClearSelection={onClearSelection}
+                    visibleShipTypes={filters.shipTypes}
                 />
             </SidebarProvider>
         </div>

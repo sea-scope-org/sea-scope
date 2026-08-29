@@ -6,6 +6,7 @@ import Map, { Layer, Marker, NavigationControl, Source } from 'react-map-gl/mapl
 import type { GqlCWatchFieldsFragment } from '../graphql/generated';
 import { cn } from '../utils/cn';
 import { navalChartTintApply } from './navalChartTint';
+import type { WatchLayerFilters } from './watchFilterState';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 // MapLibre v6 workers are separate ESM modules — Vite needs an explicit URL
@@ -25,6 +26,7 @@ export interface NavalMapClientProps {
     vessels: ReadonlyArray<Vessel>;
     highRiskZones: ReadonlyArray<HighRiskZone>;
     protectedAssets: ReadonlyArray<ProtectedAsset>;
+    layers: WatchLayerFilters;
     selectedMmsi: string | null | undefined;
     onSelect: (mmsi: string) => void;
     className?: string;
@@ -57,6 +59,7 @@ export function NavalMapClient({
     vessels,
     highRiskZones,
     protectedAssets,
+    layers,
     selectedMmsi,
     onSelect,
     className,
@@ -84,59 +87,65 @@ export function NavalMapClient({
             >
                 <NavigationControl position="bottom-left" showCompass={false} />
 
-                <Source id="high-risk-zones" type="geojson" data={zoneGeoJson}>
-                    <Layer
-                        id="high-risk-zones-fill"
-                        type="fill"
-                        paint={{
-                            'fill-color': '#b45309',
-                            'fill-opacity': 0.16,
-                        }}
-                    />
-                    <Layer
-                        id="high-risk-zones-line"
-                        type="line"
-                        paint={{
-                            'line-color': '#9a3412',
-                            'line-width': 1.5,
-                            'line-dasharray': [2, 1],
-                        }}
-                    />
-                </Source>
+                {layers.highRiskZones ? (
+                    <Source id="high-risk-zones" type="geojson" data={zoneGeoJson}>
+                        <Layer
+                            id="high-risk-zones-fill"
+                            type="fill"
+                            paint={{
+                                'fill-color': '#b45309',
+                                'fill-opacity': 0.16,
+                            }}
+                        />
+                        <Layer
+                            id="high-risk-zones-line"
+                            type="line"
+                            paint={{
+                                'line-color': '#9a3412',
+                                'line-width': 1.5,
+                                'line-dasharray': [2, 1],
+                            }}
+                        />
+                    </Source>
+                ) : null}
 
-                <Source id="protected-assets" type="geojson" data={assetGeoJson}>
-                    <Layer
-                        id="protected-assets-line"
-                        type="line"
-                        paint={{
-                            'line-color': '#1e179f',
-                            'line-width': 2.5,
-                            'line-opacity': 0.9,
-                        }}
-                    />
-                </Source>
+                {layers.protectedAssets ? (
+                    <Source id="protected-assets" type="geojson" data={assetGeoJson}>
+                        <Layer
+                            id="protected-assets-line"
+                            type="line"
+                            paint={{
+                                'line-color': '#1e179f',
+                                'line-width': 2.5,
+                                'line-opacity': 0.9,
+                            }}
+                        />
+                    </Source>
+                ) : null}
 
-                <Source id="vessel-tracks" type="geojson" data={trackGeoJson}>
-                    <Layer
-                        id="vessel-tracks-line"
-                        type="line"
-                        paint={{
-                            'line-color': [
-                                'match',
-                                ['get', 'riskLevel'],
-                                'red',
-                                '#ef4444',
-                                'orange',
-                                '#ea580c',
-                                'yellow',
-                                '#d97706',
-                                '#047857',
-                            ],
-                            'line-width': ['match', ['get', 'riskLevel'], 'red', 2.5, 'orange', 2, 1.25],
-                            'line-opacity': 0.7,
-                        }}
-                    />
-                </Source>
+                {layers.trackTails ? (
+                    <Source id="vessel-tracks" type="geojson" data={trackGeoJson}>
+                        <Layer
+                            id="vessel-tracks-line"
+                            type="line"
+                            paint={{
+                                'line-color': [
+                                    'match',
+                                    ['get', 'riskLevel'],
+                                    'red',
+                                    '#ef4444',
+                                    'orange',
+                                    '#ea580c',
+                                    'yellow',
+                                    '#d97706',
+                                    '#047857',
+                                ],
+                                'line-width': ['match', ['get', 'riskLevel'], 'red', 2.5, 'orange', 2, 1.25],
+                                'line-opacity': 0.7,
+                            }}
+                        />
+                    </Source>
+                ) : null}
 
                 {vessels.map((vessel) => {
                     const position = vessel.position;
@@ -183,19 +192,21 @@ export function NavalMapClient({
                     );
                 })}
 
-                {vessels.map((vessel) => {
-                    const radar = vessel.radarPosition;
-                    if (!radar || vessel.riskLevel === 'green') return null;
-                    return (
-                        <Marker key={`radar-${vessel.mmsi}`} longitude={radar.lon} latitude={radar.lat} anchor="center">
-                            <div
-                                title={`Simulated radar · ${vessel.name}`}
-                                className="size-2.5 rotate-45 border border-foreground/70 bg-violet-700/70"
-                                aria-hidden
-                            />
-                        </Marker>
-                    );
-                })}
+                {layers.radarContacts
+                    ? vessels.map((vessel) => {
+                          const radar = vessel.radarPosition;
+                          if (!radar || vessel.riskLevel === 'green') return null;
+                          return (
+                              <Marker key={`radar-${vessel.mmsi}`} longitude={radar.lon} latitude={radar.lat} anchor="center">
+                                  <div
+                                      title={`Simulated radar · ${vessel.name}`}
+                                      className="size-2.5 rotate-45 border border-foreground/70 bg-violet-700/70"
+                                      aria-hidden
+                                  />
+                              </Marker>
+                          );
+                      })
+                    : null}
             </Map>
         </div>
     );

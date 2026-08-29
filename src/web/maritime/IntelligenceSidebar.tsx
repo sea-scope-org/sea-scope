@@ -13,6 +13,7 @@ export interface IntelligenceSidebarProps {
     onSelectVessel: (mmsi: string) => void;
     onAcknowledgeAlert: (incidentId: string) => void;
     onClearSelection: () => void;
+    visibleShipTypes?: ReadonlySet<string>;
     className?: string;
 }
 
@@ -24,6 +25,7 @@ export function IntelligenceSidebar({
     onSelectVessel,
     onAcknowledgeAlert,
     onClearSelection,
+    visibleShipTypes,
     className,
 }: IntelligenceSidebarProps) {
     const selectedMmsi = watch?.selectedMmsi ?? null;
@@ -54,7 +56,7 @@ export function IntelligenceSidebar({
                         onAcknowledgeAlert={onAcknowledgeAlert}
                     />
                 ) : watch ? (
-                    <WatchQueue watch={watch} onSelectVessel={onSelectVessel} />
+                    <WatchQueue watch={watch} onSelectVessel={onSelectVessel} visibleShipTypes={visibleShipTypes} />
                 ) : (
                     <p className="p-4 text-xs text-muted-foreground">Waiting for watch board…</p>
                 )}

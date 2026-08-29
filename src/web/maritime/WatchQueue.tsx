@@ -9,14 +9,17 @@ import type { OsintAlert, Vessel, WatchState } from './watchSidebarShared';
 export interface WatchQueueProps {
     watch: WatchState;
     onSelectVessel: (mmsi: string) => void;
+    /** When set, only these ship types appear in the queue. */
+    visibleShipTypes?: ReadonlySet<string>;
 }
 
-export function WatchQueue({ watch, onSelectVessel }: WatchQueueProps) {
+export function WatchQueue({ watch, onSelectVessel, visibleShipTypes }: WatchQueueProps) {
     const [osintOpen, setOsintOpen] = useState(false);
     const assetsById = new Map(watch.protectedAssets.map((a) => [a.assetId, a]));
     const openAlertVessels = new Set(watch.incidents.filter((i) => i.status === 'open').map((i) => i.mmsi));
 
     const queue = [...watch.vessels]
+        .filter((v) => (visibleShipTypes ? visibleShipTypes.has(v.shipType) : true))
         .filter((v) => v.riskLevel !== 'green' || openAlertVessels.has(v.mmsi))
         .sort((a, b) => {
             const aAlert = openAlertVessels.has(a.mmsi) ? 0 : 1;

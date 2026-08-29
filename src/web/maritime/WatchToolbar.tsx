@@ -5,23 +5,30 @@ import { Separator } from '../components/base/separator';
 import { SidebarTrigger } from '../components/base/sidebar';
 import type { GqlCWatchFieldsFragment } from '../graphql/generated';
 import { cn } from '../utils/cn';
+import { WatchFilters } from './WatchFilters';
+import type { WatchFiltersState } from './watchFilterState';
 import { riskBadgeClass } from './watchSidebarShared';
 import type { RiskLevel } from './watchSidebarShared';
 
 export interface WatchToolbarProps {
     watch: GqlCWatchFieldsFragment;
+    /** Vessels after ship-type filter — band counts match map/queue. */
+    countedVessels: ReadonlyArray<GqlCWatchFieldsFragment['vessels'][number]>;
+    filters: WatchFiltersState;
+    shipTypeCatalog: ReadonlyArray<string>;
+    onFiltersChange: (next: WatchFiltersState) => void;
     onReset?: () => void;
     className?: string;
 }
 
 const BAND_ORDER: ReadonlyArray<RiskLevel> = ['red', 'orange', 'yellow', 'green'];
 
-export function WatchToolbar({ watch, onReset, className }: WatchToolbarProps) {
+export function WatchToolbar({ watch, countedVessels, filters, shipTypeCatalog, onFiltersChange, onReset, className }: WatchToolbarProps) {
     const openAlerts = watch.incidents.filter((i) => i.status === 'open').length;
     const alertLabel = openAlerts === 1 ? '1 alert' : `${openAlerts} alerts`;
 
     const bandCounts: Record<RiskLevel, number> = { green: 0, yellow: 0, orange: 0, red: 0 };
-    for (const vessel of watch.vessels) {
+    for (const vessel of countedVessels) {
         bandCounts[vessel.riskLevel] += 1;
     }
 
@@ -72,6 +79,7 @@ export function WatchToolbar({ watch, onReset, className }: WatchToolbarProps) {
             </div>
 
             <div className="ml-auto flex items-center gap-1">
+                <WatchFilters filters={filters} shipTypeCatalog={shipTypeCatalog} onChange={onFiltersChange} />
                 {onReset ? (
                     <Button
                         type="button"

@@ -8,17 +8,20 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 2. The page is full-viewport, `noindex`, and not in the sitemap. Shell chrome follows the light brand tokens; the MapLibre chart uses Carto
    Positron retinted to warm bronze land and muted sea (see [`theme.md`](../styles/theme.md)).
 3. The default **Galaxy Leader** scenario is live on load (mocked AIS) — use toolbar **Reset** to replay.
-4. Vessels appear on the chart colored by risk band; track tails and Cable C17 are drawn; selecting one opens **Case** mode in the right
+4. Toolbar **Filters** toggles chart layers (protected assets / Cable C17, high-risk zones, track tails, radar contacts) and vessel
+   `shipType`s. Filters are client-only and shared by the chart, Queue, and toolbar band counts (all on by default; **Show all** resets). A
+   vessel already in **Case** stays on the map if its type is unchecked; Queue still hides unchecked types.
+5. Vessels appear on the chart colored by risk band; track tails and Cable C17 are drawn; selecting one opens **Case** mode in the right
    rail.
-5. Live ticks / anomalies / AI briefs arrive over `sessionUpdates` (imperative URQL subscription).
-6. Sidebar **Queue** (no selection): one ranked attention list (open Red incidents first, then red → orange → yellow). Theater OSINT is a
-   collapsed disclosure at the bottom. Band counts live in the toolbar, not the rail.
-7. Sidebar **Case** (vessel selected): sticky identity + Why now (top factors) + Acknowledge / Request briefing; evidence is one panel at a
+6. Live ticks / anomalies / AI briefs arrive over `sessionUpdates` (imperative URQL subscription).
+7. Sidebar **Queue** (no selection): one ranked attention list (open Red incidents first, then red → orange → yellow), respecting ship-type
+   filters. Theater OSINT is a collapsed disclosure at the bottom. Band counts live in the toolbar, not the rail.
+8. Sidebar **Case** (vessel selected): sticky identity + Why now (top factors) + Acknowledge / Request briefing; evidence is one panel at a
    time (Timeline | Anomalies | Brief). Timeline merges risk-score changes and incident events. OSINT is not shown in Case.
-8. **Request briefing** ACKs via `vesselIntelligenceRequest` then shows progress until `SessionUpdateIntelligence` (toast on start failure /
+9. **Request briefing** ACKs via `vesselIntelligenceRequest` then shows progress until `SessionUpdateIntelligence` (toast on start failure /
    timeout; Gemini failures may still publish a stub brief).
-9. On the first high/critical anomaly, the console auto-selects Galaxy Leader (`538090574`) once for the demo.
-10. When the scenario reaches the end, it loops so the board stays live.
+10. On the first high/critical anomaly, the console auto-selects Galaxy Leader (`538090574`) once for the demo.
+11. When the scenario reaches the end, it loops so the board stays live.
 
 ## Options considered
 
@@ -53,7 +56,8 @@ Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory p
 | Operations         | `src/routes/WatchPage.graphql`                                                                                             |
 | Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                    |
 | Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts`                                               |
-| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (labeled risk-band counts, open alerts)                                                |
+| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (labeled risk-band counts, open alerts, Filters popover)                               |
+| Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (layers + ship types; owned in `watch.tsx`)                    |
 | Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail) |
 | Shared rail bits   | `src/web/maritime/watchSidebarShared.tsx`                                                                                  |
 | Layout shell       | `SidebarProvider` + `SidebarInset` in `watch.tsx`                                                                          |
