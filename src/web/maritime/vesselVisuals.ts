@@ -19,7 +19,7 @@ export function vesselTypeNormalize(shipType: string): VesselFamily {
     if (/tanker|lng|lpg|chemical|oil/.test(type)) return 'tanker';
     if (/passenger|ferry|cruise/.test(type)) return 'passenger';
     if (/fishing|trawler/.test(type)) return 'fishing';
-    if (/tug|tow|pilot|service|supply|offshore|dredg|research/.test(type)) return 'service';
+    if (/tug|tow|pilot|service|supply|offshore|dredger|research/.test(type)) return 'service';
     if (/pleasure|yacht|sailing|leisure/.test(type)) return 'pleasure';
     if (/military|navy|government|law enforcement|patrol|coast guard/.test(type)) return 'government';
     if (/cargo|container|bulk|freight|carrier/.test(type)) return 'cargo';
