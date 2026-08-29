@@ -20,18 +20,20 @@ Shared across sources:
 - A **rule-based risk engine** (`riskEngine`) over the fused vessel set.
 - **Real protected infrastructure** (`protectedInfrastructureCatalog`) — curated OSM cables/pipelines at true WGS84 (e.g. Nord Stream,
   Gibraltar-region cables). Never passed through `scenarioOffsetToBbox`. Always on the board.
-- Galaxy Leader demo overlays (zones, OSINT, simulated radar/EO) **only while Demo is on**.
+- Galaxy Leader demo overlays (zones, OSINT, simulated radar/EO) **only while Demo is on**. Mock vessel positions and those overlays are
+  mapped from Red Sea authoring coords into a **water corridor** inside `AISSTREAM_BBOX` (`aisTheaterMapPoint` / `scenarioOffsetToBbox`) so
+  the ~1° Bab el-Mandeb theater fits the narrow Gibraltar channel instead of spilling onto Andalusia/Morocco.
 - The LLM Copilot (`vesselIntelligenceRun`) **explains** structured risk evidence only.
 
 ### Persistence
 
-| Piece     | Behavior                                                                                                                                                                                                                                     |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ingest    | Both sources call `aisVesselPositionPersist` (soft-fail on DB errors so memory stays live)                                                                                                                                                   |
-| Tables    | `Vessels` + `AisPositions` with a `source` column (`mock` \| `aisstream`)                                                                                                                                                                    |
-| Throttle  | History append at most once per MMSI per 60s                                                                                                                                                                                                 |
-| Retention | Job `ais-positions-cleanup` deletes `AisPositions` older than 7 days                                                                                                                                                                         |
-| Env       | `AISSTREAM_API_KEY` / `AISSTREAM_BBOX` (default Gibraltar — Red Sea has little free AISStream coverage; mock tracks are offset into the live bbox); `AIS_MOCK_ENABLED` (default `false`; boot-only — runtime toggle via `mockAisSetEnabled`) |
+| Piece     | Behavior                                                                                                                                                                                                                                                                                                               |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ingest    | Both sources call `aisVesselPositionPersist` (soft-fail on DB errors so memory stays live)                                                                                                                                                                                                                             |
+| Tables    | `Vessels` + `AisPositions` with a `source` column (`mock` \| `aisstream`)                                                                                                                                                                                                                                              |
+| Throttle  | History append at most once per MMSI per 60s                                                                                                                                                                                                                                                                           |
+| Retention | Job `ais-positions-cleanup` deletes `AisPositions` older than 7 days                                                                                                                                                                                                                                                   |
+| Env       | `AISSTREAM_API_KEY` / `AISSTREAM_BBOX` (default Gibraltar — Red Sea has little free AISStream coverage; mock tracks are **affine-mapped** into a navigable water corridor inside the live bbox, not center-offset onto land); `AIS_MOCK_ENABLED` (default `false`; boot-only — runtime toggle via `mockAisSetEnabled`) |
 
 **Prerequisite:** `DATABASE_URL` must reach Postgres. If the DB times out, GraphQL session/watch returns 500 and the map stays empty even
 when AISStream is connected.
@@ -60,6 +62,7 @@ the browser console. Heartbeats every 15s report message/position counts.
 | Piece            | Path                                                              |
 | ---------------- | ----------------------------------------------------------------- |
 | Track store      | `src/server/maritime/vesselTrackStore.ts`                         |
+| Theater mapping  | `src/server/maritime/aisTheater.ts` (`aisTheaterMapPoint`)        |
 | Mock feeder      | `src/server/maritime/sources/mockScenarioSource.ts`               |
 | AISStream ingest | `src/server/maritime/aisStreamIngest.ts`                          |
 | Fused board      | `src/server/maritime/watchBoardRuntime.ts`                        |

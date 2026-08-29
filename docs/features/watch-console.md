@@ -65,20 +65,20 @@ Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory p
 
 ## Implementation
 
-| Piece              | Path                                                                                                                                    |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Route + SEO        | `src/routes/watch.tsx`                                                                                                                  |
-| Operations         | `src/routes/WatchPage.graphql`                                                                                                          |
-| Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                                 |
-| Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts` + `navalMapFocus.ts`                                       |
-| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (risk bands, alerts, Demo toggle, Filters)                                                          |
-| Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (layers + ship types; owned in `watch.tsx`)                                 |
-| Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail)              |
-| Shared rail bits   | `src/web/maritime/watchSidebarShared.tsx`                                                                                               |
-| Layout shell       | `SidebarProvider` + `SidebarInset` in `watch.tsx`                                                                                       |
-| Server watch board | `src/server/maritime/*`, session mutations in schema                                                                                    |
-| Protected assets   | `src/server/maritime/infrastructure/` — curated OSM GeoJSON (Nord Stream, Gibraltar-region cables); never theater-offset                |
-| Multi-source AIS   | `vesselTrackStore.ts`, `sources/mockScenarioSource.ts`, `aisStreamIngest.ts`, `watchBoardRuntime.ts`; tables `Vessels` / `AisPositions` |
+| Piece              | Path                                                                                                                                                                          |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Route + SEO        | `src/routes/watch.tsx`                                                                                                                                                        |
+| Operations         | `src/routes/WatchPage.graphql`                                                                                                                                                |
+| Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                                                                       |
+| Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts` + `navalMapFocus.ts`                                                                             |
+| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (risk bands, alerts, Demo toggle, Filters)                                                                                                |
+| Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (layers + ship types; owned in `watch.tsx`)                                                                       |
+| Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail)                                                    |
+| Shared rail bits   | `src/web/maritime/watchSidebarShared.tsx`                                                                                                                                     |
+| Layout shell       | `SidebarProvider` + `SidebarInset` in `watch.tsx`                                                                                                                             |
+| Server watch board | `src/server/maritime/*`, session mutations in schema                                                                                                                          |
+| Protected assets   | `src/server/maritime/infrastructure/` — curated OSM GeoJSON (Nord Stream, Gibraltar-region cables); never theater-offset                                                      |
+| Multi-source AIS   | `vesselTrackStore.ts`, `sources/mockScenarioSource.ts`, `aisStreamIngest.ts`, `watchBoardRuntime.ts`, `aisTheater.ts` (water-corridor map); tables `Vessels` / `AisPositions` |
 
 Basemap: Carto Positron (`basemaps.cartocdn.com/gl/positron-gl-style`) + warm chart tint on load. Scenario id: `galaxy-leader`. Protected
 asset geometries © OpenStreetMap contributors (ODbL); approximate public mapping, not operator as-built plans.

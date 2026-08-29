@@ -68,7 +68,7 @@ export function watchBoardOverlayScenario(): ScenarioDefinition {
 
     // Demo geometry (zones, simulated radar, OSINT) only when the mock feeder is
     // running — otherwise live AIS would be scored against Red Sea overlays
-    // wrongly shifted onto Gibraltar land. Real cables/pipelines stay WGS84.
+    // mapped into the Gibraltar theater. Real cables/pipelines stay WGS84.
     if (!mockScenarioSourceIsStarted()) {
         return {
             ...scenario,
