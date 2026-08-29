@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vesselFreshness, vesselProjection, vesselTypeNormalize } from './vesselVisuals';
+import { vesselFreshness, vesselProjection, vesselTypeColor, vesselTypeNormalize } from './vesselVisuals';
 import type { WatchVessel } from './vesselVisuals';
 
 describe('vesselTypeNormalize', () => {
@@ -13,6 +13,13 @@ describe('vesselTypeNormalize', () => {
         ['Coast Guard', 'government'],
         ['Other', 'unknown'],
     ])('maps %s to %s', (shipType, family) => expect(vesselTypeNormalize(shipType)).toBe(family));
+});
+
+describe('vesselTypeColor', () => {
+    it('keeps tanker burgundy distinct from risk-red halos', () => {
+        expect(vesselTypeColor('Oil Tanker')).toBe('#9f1239');
+        expect(vesselTypeColor('Oil Tanker')).not.toBe('#dc2626');
+    });
 });
 
 describe('vesselFreshness', () => {

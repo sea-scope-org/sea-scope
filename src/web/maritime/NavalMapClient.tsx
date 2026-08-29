@@ -266,9 +266,9 @@ export function NavalMapClient({
                             id="vessel-tracks-line"
                             type="line"
                             paint={{
-                                'line-color': '#334155',
-                                'line-width': 2.25,
-                                'line-opacity': 0.8,
+                                'line-color': ['case', ['==', ['get', 'active'], 1], '#0f172a', '#94a3b8'],
+                                'line-width': ['case', ['==', ['get', 'active'], 1], 2.5, 1.25],
+                                'line-opacity': ['case', ['==', ['get', 'active'], 1], 0.9, 0.4],
                             }}
                         />
                     </Source>
@@ -384,10 +384,13 @@ function tracksToGeoJson(vessels: ReadonlyArray<Vessel>, activeMmsi: string | nu
     return {
         type: 'FeatureCollection' as const,
         features: vessels
-            .filter((v) => v.mmsi === activeMmsi && v.trackTail.length >= 2)
+            .filter((v) => v.trackTail.length >= 2)
             .map((vessel) => ({
                 type: 'Feature' as const,
-                properties: { mmsi: vessel.mmsi, riskLevel: vessel.riskLevel },
+                properties: {
+                    mmsi: vessel.mmsi,
+                    active: vessel.mmsi === activeMmsi ? 1 : 0,
+                },
                 geometry: {
                     type: 'LineString' as const,
                     coordinates: vessel.trackTail.map((p) => [p.lon, p.lat] as [number, number]),
@@ -427,16 +430,16 @@ function MapLegend() {
             <summary className="cursor-pointer px-3 py-2 font-semibold tracking-wide uppercase">Map legend</summary>
             <div className="space-y-2 border-t border-border px-3 py-2 text-muted-foreground">
                 <p>
-                    <strong className="text-foreground">Vessel color</strong> = type: Cargo blue · Tanker red · Passenger purple · Fishing
-                    green · Service orange · Pleasure cyan · Government black · Unknown gray.
+                    <strong className="text-foreground">Vessel color</strong> = type: Cargo blue · Tanker burgundy · Passenger purple ·
+                    Fishing green · Service orange · Pleasure cyan · Government black · Unknown gray.
                 </p>
                 <p>
                     <strong className="text-foreground">Risk halo</strong>: none Green · Yellow elevated · Orange high · pulsing Red
                     critical.
                 </p>
-                <p>Orientation = heading · faded = stale · double outline = selected.</p>
+                <p>Orientation = heading · faded = stale · dashed ring = AIS dark · double outline = selected.</p>
                 <p>
-                    <span className="font-semibold text-foreground">Solid</span> = observed ·{' '}
+                    <span className="font-semibold text-foreground">Solid</span> = observed (muted; stronger when focused) ·{' '}
                     <span className="font-semibold text-foreground">dashed</span> = calculated projection, not declared intent.
                 </p>
             </div>

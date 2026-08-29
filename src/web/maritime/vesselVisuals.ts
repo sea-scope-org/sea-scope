@@ -5,7 +5,7 @@ export type VesselFamily = 'cargo' | 'tanker' | 'passenger' | 'fishing' | 'servi
 
 export const VESSEL_FAMILY_COLORS: Record<VesselFamily, { label: string; color: string }> = {
     cargo: { label: 'Cargo', color: '#2563eb' },
-    tanker: { label: 'Tanker', color: '#dc2626' },
+    tanker: { label: 'Tanker', color: '#9f1239' },
     passenger: { label: 'Passenger', color: '#7c3aed' },
     fishing: { label: 'Fishing', color: '#16a34a' },
     service: { label: 'Tug / service', color: '#ea580c' },

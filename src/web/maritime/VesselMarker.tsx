@@ -34,10 +34,11 @@ export function VesselMarker({
     const position = vessel.position!;
     const opacity = vesselFreshness(position.timestamp, nowMs).opacity;
     const halo = HALO_CLASS[vessel.riskLevel];
+    const aisDarkLabel = vessel.aisDark ? ', AIS dark' : '';
     return (
         <button
             type="button"
-            aria-label={`${vessel.name}, ${vessel.shipType}, ${vessel.riskLevel} risk ${vessel.riskScore}`}
+            aria-label={`${vessel.name}, ${vessel.shipType}, ${vessel.riskLevel} risk ${vessel.riskScore}${aisDarkLabel}`}
             aria-current={selected ? 'true' : undefined}
             className="relative flex size-9 cursor-pointer items-center justify-center border-0 bg-transparent p-0 outline-none focus-visible:ring-[3px] focus-visible:ring-white/90"
             onClick={(event) => {
@@ -55,6 +56,9 @@ export function VesselMarker({
                     className="absolute size-12 rounded-full border-2 border-red-500/80 animate-[naval-map-critical-halo_2400ms_ease-out_infinite] motion-reduce:animate-none"
                     aria-hidden
                 />
+            ) : null}
+            {vessel.aisDark ? (
+                <span className="absolute size-10 rounded-full border border-dashed border-foreground/80" aria-hidden />
             ) : null}
             {selected ? <span className="absolute size-8 rounded-full border border-slate-950 ring-2 ring-white" aria-hidden /> : null}
             {arrivalPulse ? (

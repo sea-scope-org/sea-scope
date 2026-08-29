@@ -27,9 +27,10 @@ Shared across sources:
   mapped from Red Sea authoring coords into a **water corridor** inside `AISSTREAM_BBOX` (`aisTheaterMapPoint` / `scenarioOffsetToBbox`) so
   the ~1° Bab el-Mandeb theater fits the narrow Gibraltar channel instead of spilling onto Andalusia/Morocco.
 - The LLM Copilot (`vesselIntelligenceRun`) **explains** structured risk evidence only.
-- The chart keeps vessel identity and attention independent: normalized ship family controls marker color, while the existing risk bands
-  control external fixed screen-space halos. Client-only constant-course/speed projections add short-horizon context without changing the
-  server risk engine or claiming vessel intent.
+- The chart keeps vessel identity and attention independent: normalized ship family controls marker color (tanker burgundy, not risk-red),
+  while the existing risk bands control external fixed screen-space halos and AIS dark uses a separate dashed ring. Observed track tails
+  stay on for all contacts when enabled (muted, with the focused contact strengthened). Client-only constant-course/speed projections add
+  short-horizon context for the focused contact without changing the server risk engine or claiming vessel intent.
 
 ### Persistence
 
