@@ -1,19 +1,19 @@
-import type { ComponentType, SVGProps } from 'react';
 import {
-    ArrowDownRight,
-    ArrowRight,
-    ArrowUpRight,
-    Compass,
-    Flag,
-    Gauge,
-    MapPinned,
-    RadioTower,
-    Route,
-    Satellite,
-    ShieldAlert,
-    Ship,
-    Waves,
+    ArrowDownRightIcon,
+    ArrowRightIcon,
+    ArrowUpRightIcon,
+    CompassIcon,
+    FlagIcon,
+    GaugeIcon,
+    MapPinnedIcon,
+    RadioTowerIcon,
+    RouteIcon,
+    SatelliteIcon,
+    ShieldAlertIcon,
+    ShipIcon,
+    WavesIcon,
 } from 'lucide-react';
+import type { ComponentType, SVGProps } from 'react';
 import { cn } from '../utils/cn';
 import type { WatchVessel } from './vesselVisuals';
 import { freshnessLabel, VESSEL_FAMILY_COLORS, vesselProjection, vesselTypeNormalize } from './vesselVisuals';
@@ -28,9 +28,9 @@ const RISK_TONE: Record<WatchVessel['riskLevel'], string> = {
 };
 
 const TREND_META: Record<WatchVessel['riskTrend'], { Icon: PreviewIcon; label: string }> = {
-    falling: { Icon: ArrowDownRight, label: 'Falling' },
-    rising: { Icon: ArrowUpRight, label: 'Rising' },
-    steady: { Icon: ArrowRight, label: 'Steady' },
+    falling: { Icon: ArrowDownRightIcon, label: 'Falling' },
+    rising: { Icon: ArrowUpRightIcon, label: 'Rising' },
+    steady: { Icon: ArrowRightIcon, label: 'Steady' },
 };
 
 export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVessel; nowMs: number; assetName: string | null }) {
@@ -62,27 +62,27 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
                         RISK_TONE[vessel.riskLevel],
                     )}
                 >
-                    <ShieldAlert className="size-3.5" aria-hidden />
+                    <ShieldAlertIcon className="size-3.5" aria-hidden />
                     <span>{vessel.riskScore}</span>
                     <trend.Icon className="size-3.5" aria-label={trend.label} />
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-px bg-border text-[10px]">
-                <PreviewMetric Icon={Flag} label="Flag" value={vessel.flag || 'Unknown'} />
-                <PreviewMetric Icon={Ship} label="MMSI" value={vessel.mmsi} />
-                {vessel.imo ? <PreviewMetric Icon={Waves} label="IMO" value={vessel.imo} /> : null}
-                <PreviewMetric Icon={Gauge} label="Speed" value={position ? `${position.sog.toFixed(1)} kn` : 'No fix'} />
+                <PreviewMetric Icon={FlagIcon} label="Flag" value={vessel.flag || 'Unknown'} />
+                <PreviewMetric Icon={ShipIcon} label="MMSI" value={vessel.mmsi} />
+                {vessel.imo ? <PreviewMetric Icon={WavesIcon} label="IMO" value={vessel.imo} /> : null}
+                <PreviewMetric Icon={GaugeIcon} label="Speed" value={position ? `${position.sog.toFixed(1)} kn` : 'No fix'} />
                 <PreviewMetric
-                    Icon={Compass}
+                    Icon={CompassIcon}
                     label="Course"
                     value={position ? `${String(Math.round(position.cog)).padStart(3, '0')} deg` : 'No fix'}
                 />
-                <PreviewMetric Icon={vessel.aisDark ? RadioTower : Satellite} label="AIS" value={aisStatus} />
-                {vessel.radarPosition ? <PreviewMetric Icon={RadioTower} label="Radar" value="Available" /> : null}
+                <PreviewMetric Icon={vessel.aisDark ? RadioTowerIcon : SatelliteIcon} label="AIS" value={aisStatus} />
+                {vessel.radarPosition ? <PreviewMetric Icon={RadioTowerIcon} label="Radar" value="Available" /> : null}
                 {assetName ? (
                     <PreviewMetric
-                        Icon={MapPinned}
+                        Icon={MapPinnedIcon}
                         label="Asset"
                         value={vessel.nearestAssetDistanceNm != null ? `${vessel.nearestAssetDistanceNm.toFixed(2)} nm` : assetName}
                     />
@@ -91,12 +91,12 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
 
             <div className="space-y-2 p-3">
                 <div className="flex items-start gap-2 rounded-sm bg-muted/70 p-2">
-                    <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
+                    <ShieldAlertIcon className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
                     <p className="line-clamp-2 text-muted-foreground">{reason ?? 'No elevated factors'}</p>
                 </div>
                 <div className="flex items-center justify-between text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5">
-                        <Route className="size-3.5" aria-hidden />
+                        <RouteIcon className="size-3.5" aria-hidden />
                         {projection.length ? '+10 / +20 min projection' : 'No projection'}
                     </span>
                     <span className="font-medium text-foreground">Click for evidence</span>
