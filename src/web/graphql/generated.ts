@@ -630,6 +630,7 @@ export interface GqlCVessel {
     activeFactors: Array<GqlCRiskFactor>;
     aisDark: Scalars['Boolean']['output'];
     callSign?: Maybe<Scalars['String']['output']>;
+    dataSource: GqlCVesselDataSource;
     flag: Scalars['String']['output'];
     imo?: Maybe<Scalars['String']['output']>;
     mmsi: Scalars['ID']['output'];
@@ -644,6 +645,8 @@ export interface GqlCVessel {
     shipType: Scalars['String']['output'];
     trackTail: Array<GqlCLatLon>;
 }
+
+export type GqlCVesselDataSource = 'aisstream' | 'mock';
 
 export interface GqlCVesselIntelligence {
     __typename?: 'VesselIntelligence';
@@ -675,11 +678,20 @@ export interface GqlCVesselPosition {
     timestamp: Scalars['DateTime']['output'];
 }
 
+export interface GqlCWatchDataSourceStatus {
+    __typename?: 'WatchDataSourceStatus';
+    enabled: Scalars['Boolean']['output'];
+    id: GqlCVesselDataSource;
+    status: Scalars['String']['output'];
+    vesselCount: Scalars['Int']['output'];
+}
+
 export interface GqlCWatchState {
     __typename?: 'WatchState';
     anomalies: Array<GqlCAnomaly>;
     centerLat: Scalars['Float']['output'];
     centerLon: Scalars['Float']['output'];
+    dataSources: Array<GqlCWatchDataSourceStatus>;
     description: Scalars['String']['output'];
     highRiskZones: Array<GqlCHighRiskZone>;
     incidents: Array<GqlCIncident>;
@@ -1218,6 +1230,7 @@ export type GqlCWatchFieldsFragment = {
     centerLon: number;
     zoom: number;
     selectedMmsi: string | null;
+    dataSources: Array<{ id: Schema.GqlCVesselDataSource; enabled: boolean; status: string; vesselCount: number }>;
     vessels: Array<{
         mmsi: string;
         name: string;
@@ -1225,6 +1238,7 @@ export type GqlCWatchFieldsFragment = {
         shipType: string;
         flag: string;
         aisDark: boolean;
+        dataSource: Schema.GqlCVesselDataSource;
         riskScore: number;
         riskLevel: Schema.GqlCRiskLevel;
         riskTrend: Schema.GqlCRiskTrend;
@@ -1298,6 +1312,7 @@ export type GqlCWatchPageQuery = {
             centerLon: number;
             zoom: number;
             selectedMmsi: string | null;
+            dataSources: Array<{ id: Schema.GqlCVesselDataSource; enabled: boolean; status: string; vesselCount: number }>;
             vessels: Array<{
                 mmsi: string;
                 name: string;
@@ -1305,6 +1320,7 @@ export type GqlCWatchPageQuery = {
                 shipType: string;
                 flag: string;
                 aisDark: boolean;
+                dataSource: Schema.GqlCVesselDataSource;
                 riskScore: number;
                 riskLevel: Schema.GqlCRiskLevel;
                 riskTrend: Schema.GqlCRiskTrend;
@@ -1382,6 +1398,7 @@ export type GqlCVesselSelectMutation = {
             centerLon: number;
             zoom: number;
             selectedMmsi: string | null;
+            dataSources: Array<{ id: Schema.GqlCVesselDataSource; enabled: boolean; status: string; vesselCount: number }>;
             vessels: Array<{
                 mmsi: string;
                 name: string;
@@ -1389,6 +1406,7 @@ export type GqlCVesselSelectMutation = {
                 shipType: string;
                 flag: string;
                 aisDark: boolean;
+                dataSource: Schema.GqlCVesselDataSource;
                 riskScore: number;
                 riskLevel: Schema.GqlCRiskLevel;
                 riskTrend: Schema.GqlCRiskTrend;
@@ -1473,6 +1491,7 @@ export type GqlCAlertAcknowledgeMutation = {
             centerLon: number;
             zoom: number;
             selectedMmsi: string | null;
+            dataSources: Array<{ id: Schema.GqlCVesselDataSource; enabled: boolean; status: string; vesselCount: number }>;
             vessels: Array<{
                 mmsi: string;
                 name: string;
@@ -1480,6 +1499,7 @@ export type GqlCAlertAcknowledgeMutation = {
                 shipType: string;
                 flag: string;
                 aisDark: boolean;
+                dataSource: Schema.GqlCVesselDataSource;
                 riskScore: number;
                 riskLevel: Schema.GqlCRiskLevel;
                 riskTrend: Schema.GqlCRiskTrend;
@@ -1554,6 +1574,7 @@ export type GqlCScenarioResetMutation = {
             centerLon: number;
             zoom: number;
             selectedMmsi: string | null;
+            dataSources: Array<{ id: Schema.GqlCVesselDataSource; enabled: boolean; status: string; vesselCount: number }>;
             vessels: Array<{
                 mmsi: string;
                 name: string;
@@ -1561,6 +1582,7 @@ export type GqlCScenarioResetMutation = {
                 shipType: string;
                 flag: string;
                 aisDark: boolean;
+                dataSource: Schema.GqlCVesselDataSource;
                 riskScore: number;
                 riskLevel: Schema.GqlCRiskLevel;
                 riskTrend: Schema.GqlCRiskTrend;
@@ -1663,6 +1685,7 @@ export type GqlCSessionUpdatesSubscription = {
                   centerLon: number;
                   zoom: number;
                   selectedMmsi: string | null;
+                  dataSources: Array<{ id: Schema.GqlCVesselDataSource; enabled: boolean; status: string; vesselCount: number }>;
                   vessels: Array<{
                       mmsi: string;
                       name: string;
@@ -1670,6 +1693,7 @@ export type GqlCSessionUpdatesSubscription = {
                       shipType: string;
                       flag: string;
                       aisDark: boolean;
+                      dataSource: Schema.GqlCVesselDataSource;
                       riskScore: number;
                       riskLevel: Schema.GqlCRiskLevel;
                       riskTrend: Schema.GqlCRiskTrend;
@@ -2298,6 +2322,19 @@ export const WatchFieldsFragmentDoc = {
                     { kind: 'Field', name: { kind: 'Name', value: 'selectedMmsi' } },
                     {
                         kind: 'Field',
+                        name: { kind: 'Name', value: 'dataSources' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'enabled' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'vesselCount' } },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
                         name: { kind: 'Name', value: 'vessels' },
                         selectionSet: {
                             kind: 'SelectionSet',
@@ -2308,6 +2345,7 @@ export const WatchFieldsFragmentDoc = {
                                 { kind: 'Field', name: { kind: 'Name', value: 'shipType' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'flag' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'aisDark' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskScore' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskLevel' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskTrend' } },
@@ -4036,6 +4074,19 @@ export const WatchPageDocument = {
                     { kind: 'Field', name: { kind: 'Name', value: 'selectedMmsi' } },
                     {
                         kind: 'Field',
+                        name: { kind: 'Name', value: 'dataSources' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'enabled' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'vesselCount' } },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
                         name: { kind: 'Name', value: 'vessels' },
                         selectionSet: {
                             kind: 'SelectionSet',
@@ -4046,6 +4097,7 @@ export const WatchPageDocument = {
                                 { kind: 'Field', name: { kind: 'Name', value: 'shipType' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'flag' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'aisDark' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskScore' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskLevel' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskTrend' } },
@@ -4296,6 +4348,19 @@ export const VesselSelectDocument = {
                     { kind: 'Field', name: { kind: 'Name', value: 'selectedMmsi' } },
                     {
                         kind: 'Field',
+                        name: { kind: 'Name', value: 'dataSources' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'enabled' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'vesselCount' } },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
                         name: { kind: 'Name', value: 'vessels' },
                         selectionSet: {
                             kind: 'SelectionSet',
@@ -4306,6 +4371,7 @@ export const VesselSelectDocument = {
                                 { kind: 'Field', name: { kind: 'Name', value: 'shipType' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'flag' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'aisDark' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskScore' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskLevel' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskTrend' } },
@@ -4605,6 +4671,19 @@ export const AlertAcknowledgeDocument = {
                     { kind: 'Field', name: { kind: 'Name', value: 'selectedMmsi' } },
                     {
                         kind: 'Field',
+                        name: { kind: 'Name', value: 'dataSources' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'enabled' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'vesselCount' } },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
                         name: { kind: 'Name', value: 'vessels' },
                         selectionSet: {
                             kind: 'SelectionSet',
@@ -4615,6 +4694,7 @@ export const AlertAcknowledgeDocument = {
                                 { kind: 'Field', name: { kind: 'Name', value: 'shipType' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'flag' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'aisDark' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskScore' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskLevel' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskTrend' } },
@@ -4851,6 +4931,19 @@ export const ScenarioResetDocument = {
                     { kind: 'Field', name: { kind: 'Name', value: 'selectedMmsi' } },
                     {
                         kind: 'Field',
+                        name: { kind: 'Name', value: 'dataSources' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'enabled' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'vesselCount' } },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
                         name: { kind: 'Name', value: 'vessels' },
                         selectionSet: {
                             kind: 'SelectionSet',
@@ -4861,6 +4954,7 @@ export const ScenarioResetDocument = {
                                 { kind: 'Field', name: { kind: 'Name', value: 'shipType' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'flag' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'aisDark' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskScore' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskLevel' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskTrend' } },
@@ -5169,6 +5263,19 @@ export const SessionUpdatesDocument = {
                     { kind: 'Field', name: { kind: 'Name', value: 'selectedMmsi' } },
                     {
                         kind: 'Field',
+                        name: { kind: 'Name', value: 'dataSources' },
+                        selectionSet: {
+                            kind: 'SelectionSet',
+                            selections: [
+                                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'enabled' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'vesselCount' } },
+                            ],
+                        },
+                    },
+                    {
+                        kind: 'Field',
                         name: { kind: 'Name', value: 'vessels' },
                         selectionSet: {
                             kind: 'SelectionSet',
@@ -5179,6 +5286,7 @@ export const SessionUpdatesDocument = {
                                 { kind: 'Field', name: { kind: 'Name', value: 'shipType' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'flag' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'aisDark' } },
+                                { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskScore' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskLevel' } },
                                 { kind: 'Field', name: { kind: 'Name', value: 'riskTrend' } },

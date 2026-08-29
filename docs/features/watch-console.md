@@ -7,7 +7,9 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 1. From the home page, **Open console / demo** navigates to `/watch`.
 2. The page is full-viewport, `noindex`, and not in the sitemap. Shell chrome follows the light brand tokens; the MapLibre chart uses Carto
    Positron retinted to warm bronze land and muted sea (see [`theme.md`](../styles/theme.md)).
-3. The default **Galaxy Leader** scenario is live on load (mocked AIS) — use toolbar **Reset** to replay.
+3. The fused watch board is live on load: **Galaxy Leader mock** vessels stream by default, and **live AISStream** positions appear
+   alongside when `AISSTREAM_API_KEY` is set. Use toolbar **Reset** to clear selection / risk stickies. Toolbar badges show demo/live vessel
+   counts.
 4. Toolbar **Filters** toggles chart layers (protected assets / Cable C17, high-risk zones, track tails, radar contacts) and vessel
    `shipType`s. Filters are client-only and shared by the chart, Queue, and toolbar band counts (all on by default; **Show all** resets). A
    vessel already in **Case** stays on the map if its type is unchecked; Queue still hides unchecked types.
@@ -41,27 +43,29 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 
 ## Option chosen
 
-Always-live default scenario (`scenarioEnsureLive` on `Session.watch`) + imperative `executeSubscription` + light brand chrome (toolbar /
-sidebar / shell) with Queue ↔ Case attention rail. Chart basemap is Carto Positron with `navalChartTintApply` (bronze land `#c4a882`, muted
-sea `#8fa3ab`). Client-only MapLibre mount so SSR does not load GL. Scenario loops on completion; `scenarioReset` restarts for demos.
+Always-live fused board (mock Galaxy Leader + optional AISStream) via `scenarioEnsureLive` on `Session.watch` + imperative
+`executeSubscription` + light brand chrome (toolbar / sidebar / shell) with Queue ↔ Case attention rail. Chart basemap is Carto Positron
+with `navalChartTintApply` (bronze land `#c4a882`, muted sea `#8fa3ab`). Client-only MapLibre mount so SSR does not load GL. Mock scenario
+loops on completion; `scenarioReset` clears fused board session state for demos.
 
 Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory player + risk engine:
 [`maritime-watch.md`](../architecture/maritime-watch.md).
 
 ## Implementation
 
-| Piece              | Path                                                                                                                       |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| Route + SEO        | `src/routes/watch.tsx`                                                                                                     |
-| Operations         | `src/routes/WatchPage.graphql`                                                                                             |
-| Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                    |
-| Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts`                                               |
-| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (labeled risk-band counts, open alerts, Filters popover)                               |
-| Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (layers + ship types; owned in `watch.tsx`)                    |
-| Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail) |
-| Shared rail bits   | `src/web/maritime/watchSidebarShared.tsx`                                                                                  |
-| Layout shell       | `SidebarProvider` + `SidebarInset` in `watch.tsx`                                                                          |
-| Server watch board | `src/server/maritime/*`, session mutations in schema                                                                       |
+| Piece              | Path                                                                                                                                    |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Route + SEO        | `src/routes/watch.tsx`                                                                                                                  |
+| Operations         | `src/routes/WatchPage.graphql`                                                                                                          |
+| Live state         | `src/web/maritime/useSessionUpdates.ts`                                                                                                 |
+| Chart              | `src/web/maritime/NavalMap.tsx` + `NavalMapClient.tsx` + `navalChartTint.ts`                                                            |
+| Toolbar            | `src/web/maritime/WatchToolbar.tsx` (labeled risk-band counts, open alerts, Filters popover)                                            |
+| Filters            | `src/web/maritime/WatchFilters.tsx` + `watchFilterState.ts` (layers + ship types; owned in `watch.tsx`)                                 |
+| Attention rail     | `src/web/maritime/IntelligenceSidebar.tsx` + `WatchQueue.tsx` + `WatchCase.tsx` (fixed-width Queue ↔ Case; no resize rail)              |
+| Shared rail bits   | `src/web/maritime/watchSidebarShared.tsx`                                                                                               |
+| Layout shell       | `SidebarProvider` + `SidebarInset` in `watch.tsx`                                                                                       |
+| Server watch board | `src/server/maritime/*`, session mutations in schema                                                                                    |
+| Multi-source AIS   | `vesselTrackStore.ts`, `sources/mockScenarioSource.ts`, `aisStreamIngest.ts`, `watchBoardRuntime.ts`; tables `Vessels` / `AisPositions` |
 
 Basemap: Carto Positron (`basemaps.cartocdn.com/gl/positron-gl-style`) + warm chart tint on load. Scenario id: `galaxy-leader`.
 

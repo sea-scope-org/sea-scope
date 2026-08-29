@@ -26,6 +26,8 @@ export type ScenarioVesselState = VesselIdentity & {
     nearestAssetDistanceNm: number | null;
     trackTail: LatLon[];
     radarPosition: LatLon | null;
+    /** Ingest source when fused; scenario-only players default to mock. */
+    dataSource: 'mock' | 'aisstream';
 };
 
 type ScenarioPlayerStatus = 'running' | 'completed';
@@ -106,6 +108,7 @@ function vesselDefaults(v: VesselIdentity): ScenarioVesselState {
         nearestAssetDistanceNm: null,
         trackTail: [],
         radarPosition: null,
+        dataSource: 'mock',
     };
 }
 
@@ -167,6 +170,11 @@ function timelineFromRiskEvent(event: RiskEvent): IncidentTimelineEvent {
         explanation: event.explanation,
         riskChange: event.scoreDelta,
     };
+}
+
+export function scenarioPositionSample(scenario: ScenarioDefinition, mmsi: string, simMs: number): AisPosition | null {
+    const track = scenario.tracks[mmsi] ?? [];
+    return livePositionAt(track, simMs, scenario.tickIntervalMs, scenario) ?? lastKnownAt(track, simMs, scenario);
 }
 
 export function scenarioPlayerGet(sessionId: string): ScenarioPlayerState | null {

@@ -2,48 +2,62 @@
 
 ## Context
 
-SeaScope’s MVP must demonstrate live vessel monitoring, explainable risk, attention prioritization, and Red-alert incidents without
-production sensor fusion or a maritime database. The product loop is **MAP → PRIORITY → WHY → ALERT** (see
-[`docs/features/seascope.md`](../features/seascope.md)).
+SeaScope’s MVP must demonstrate live vessel monitoring, explainable risk, attention prioritization, and Red-alert incidents. The product
+loop is **MAP → PRIORITY → WHY → ALERT** (see [`docs/features/seascope.md`](../features/seascope.md)).
 
 ## Decision
 
-Run an **in-memory, cookie-session scenario player** with:
+Run a **fused multi-source watch board** behind one GraphQL `WatchState` + `sessionUpdates` SSE surface:
 
-1. Curated AIS track replay (Galaxy Leader) advanced by a wall-clock tick driver.
-2. Pure kinematic detectors (`kinematicsDetect`) that emit sticky `Anomaly` records.
-3. A **rule-based risk engine** (`riskEngine`) that recomputes each vessel’s 0–100 score, band, trend, and active factors every tick.
-4. GraphQL `WatchState` + `sessionUpdates` SSE so the chart and attention sidebar stay live.
-5. Simulated radar/EO observations and `ProtectedAsset` geometry in scenario config (clearly marked simulated).
-6. In-memory `Incident` on first Red transition; `alertAcknowledge` / `scenarioReset` for operators and judges.
+1. **Mock source (`mock`)** — Galaxy Leader curated AIS replay fed into a shared track store on a wall-clock tick (demo incidents).
+2. **Live source (`aisstream`)** — AISStream WebSocket ingest into the same store + Postgres persistence when `AISSTREAM_API_KEY` is set.
 
-The LLM Copilot (`vesselIntelligenceRun`) **explains** structured risk evidence only — it must not invent detections or set the score.
+Shared across sources:
+
+- `vesselTrackStore` — latest identity/position/track tail tagged by source; live wins on MMSI collision for 5 minutes.
+- Pure kinematic detectors (`kinematicsDetect`) that emit sticky `Anomaly` records.
+- A **rule-based risk engine** (`riskEngine`) over the fused vessel set.
+- Galaxy Leader overlays (Cable C17, zones, OSINT, simulated radar/EO) on the board.
+- The LLM Copilot (`vesselIntelligenceRun`) **explains** structured risk evidence only.
+
+### Persistence
+
+| Piece     | Behavior                                                                                   |
+| --------- | ------------------------------------------------------------------------------------------ |
+| Ingest    | Both sources call `aisVesselPositionPersist` (soft-fail on DB errors so memory stays live) |
+| Tables    | `Vessels` + `AisPositions` with a `source` column (`mock` \| `aisstream`)                  |
+| Throttle  | History append at most once per MMSI per 60s                                               |
+| Retention | Job `ais-positions-cleanup` deletes `AisPositions` older than 7 days                       |
+| Env       | `AISSTREAM_API_KEY` / `AISSTREAM_BBOX`; `AIS_MOCK_ENABLED` (default `true`)                |
+
+**Prerequisite:** `DATABASE_URL` must reach Postgres. If the DB times out, GraphQL session/watch returns 500 and the map stays empty even
+when AISStream is connected (server logs only).
 
 ## Alternatives considered
 
-| Alternative                         | Why rejected                                        |
-| ----------------------------------- | --------------------------------------------------- |
-| Live AIS / real radar adapters      | Brittle for demos; out of MVP scope                 |
-| PostGIS + persisted maritime tables | Unnecessary while state is session-scoped demo      |
-| Black-box ML risk model             | Not explainable; contradicts product principles     |
-| Client-only simulation              | Risk/incident logic must be authoritative on server |
+| Alternative                       | Why rejected / deferred                              |
+| --------------------------------- | ---------------------------------------------------- |
+| Exclusive live vs scenario mode   | Empty map when live is quiet; hid the demo narrative |
+| MarineTraffic free / online plans | Web UI only; API is sales-gated                      |
+| pg-boss cron as primary ingest    | AISStream is a long-lived WebSocket                  |
+| Client-only AISStream             | Forbidden by AISStream; would leak the API key       |
 
 ## Consequences
 
-- Watch state is lost on process restart (acceptable for MVP demos).
-- Risk thresholds and deltas live in `riskEngine` — tune there, not in the UI.
-- Anomalies remain the detector layer; risk factors are the operator-facing explanation layer.
-- Feature UX docs: [`watch-console.md`](../features/watch-console.md).
+- Operators always see demo vessels when mock is enabled; live traffic appears alongside in the same theater.
+- Vessel identity + position history survive restarts in Postgres; in-memory risk/anomaly board does not.
+- Feature UX: [`watch-console.md`](../features/watch-console.md).
 
 ## Key files
 
-| Piece           | Path                                                |
-| --------------- | --------------------------------------------------- |
-| Types           | `src/server/maritime/types.ts`                      |
-| Risk engine     | `src/server/maritime/riskEngine.ts`                 |
-| Scenario player | `src/server/maritime/scenarioRuntime.ts`            |
-| Tick driver     | `src/server/maritime/scenarioTickDriver.ts`         |
-| Galaxy Leader   | `src/server/maritime/scenarios/galaxyLeader.ts`     |
-| GraphQL         | `src/server/graphql/schema.graphqls` (`WatchState`) |
-| Commands        | `src/server/commands/scenarioControl.ts`            |
-| Mapper          | `src/server/mappers/toGqlWatch.ts`                  |
+| Piece            | Path                                                              |
+| ---------------- | ----------------------------------------------------------------- |
+| Track store      | `src/server/maritime/vesselTrackStore.ts`                         |
+| Mock feeder      | `src/server/maritime/sources/mockScenarioSource.ts`               |
+| AISStream ingest | `src/server/maritime/aisStreamIngest.ts`                          |
+| Fused board      | `src/server/maritime/watchBoardRuntime.ts`                        |
+| Tick driver      | `src/server/maritime/watchBoardTickDriver.ts`                     |
+| Persist          | `src/server/commands/aisVesselPositionPersist.ts`                 |
+| Control          | `src/server/commands/scenarioControl.ts`                          |
+| GraphQL          | `schema.graphqls` (`Vessel.dataSource`, `WatchState.dataSources`) |
+| DB               | `Vessels` / `AisPositions`                                        |

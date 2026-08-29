@@ -38,6 +38,8 @@
     ],
     "ignoreIssues": {
         "src/shared/index.ts": ["exports", "types"],
-        "src/server/agents/agentScaffolding.ts": ["exports", "types"]
+        "src/server/agents/agentScaffolding.ts": ["exports", "types"],
+        "src/server/maritime/scenarioRuntime.ts": ["exports"],
+        "src/server/maritime/vesselIntelligenceStore.ts": ["exports"]
     }
 }

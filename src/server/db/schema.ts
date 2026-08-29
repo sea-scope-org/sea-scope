@@ -1,6 +1,7 @@
 import {
     boolean,
     customType,
+    doublePrecision,
     foreignKey,
     index,
     integer,
@@ -519,3 +520,67 @@ export const chatMessageUserAttachments = pgTable(
 
 export type ChatMessageUserAttachment = typeof chatMessageUserAttachments.$inferSelect;
 export type ChatMessageUserAttachmentCreate = typeof chatMessageUserAttachments.$inferInsert;
+
+// --- Maritime AIS -------------------------------------------------------------
+//
+// Live AIS from AISStream is upserted into `Vessels` (latest identity + last
+// known fix) and appended to `AisPositions` (throttled history). MMSI is the
+// natural primary key. See `docs/architecture/maritime-watch.md`.
+
+export const vessels = pgTable(
+    'Vessels',
+    {
+        mmsi: varchar().primaryKey(),
+        name: varchar().notNull().default(''),
+        imo: varchar(),
+        callSign: varchar(),
+        shipType: varchar().notNull().default('Unknown'),
+        flag: varchar().notNull().default('Unknown'),
+        // Ingest source: `mock` (Galaxy Leader feeder) or `aisstream`.
+        source: varchar().notNull().default('aisstream'),
+        lastLat: doublePrecision(),
+        lastLon: doublePrecision(),
+        lastSog: doublePrecision(),
+        lastCog: doublePrecision(),
+        lastHeading: doublePrecision(),
+        lastNavStatus: varchar(),
+        lastReportedAt: timestamp({ withTimezone: true }),
+        updatedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+        createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+    },
+    (table) => [index('Vessels_lastReportedAt_idx').on(table.lastReportedAt), index('Vessels_source_idx').on(table.source)],
+);
+
+export type Vessel = typeof vessels.$inferSelect;
+export type VesselCreate = typeof vessels.$inferInsert;
+
+export const aisPositions = pgTable(
+    'AisPositions',
+    {
+        aisPositionId: uuid().primaryKey(),
+        mmsi: varchar().notNull(),
+        source: varchar().notNull().default('aisstream'),
+        lat: doublePrecision().notNull(),
+        lon: doublePrecision().notNull(),
+        sog: doublePrecision().notNull(),
+        cog: doublePrecision().notNull(),
+        heading: doublePrecision().notNull(),
+        navStatus: varchar(),
+        reportedAt: timestamp({ withTimezone: true }).notNull(),
+        createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+    },
+    (table) => [
+        foreignKey({
+            columns: [table.mmsi],
+            foreignColumns: [vessels.mmsi],
+        })
+            .onUpdate('cascade')
+            .onDelete('cascade'),
+        index('AisPositions_mmsi_reportedAt_idx').on(table.mmsi, table.reportedAt),
+        index('AisPositions_reportedAt_idx').on(table.reportedAt),
+        index('AisPositions_source_idx').on(table.source),
+    ],
+);
+
+export type AisPositionRow = typeof aisPositions.$inferSelect;
+export type AisPositionCreate = typeof aisPositions.$inferInsert;

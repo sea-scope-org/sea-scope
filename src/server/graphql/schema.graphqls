@@ -457,6 +457,7 @@ type Vessel {
     shipType: String!
     flag: String!
     aisDark: Boolean!
+    dataSource: VesselDataSource!
     position: VesselPosition
     riskScore: Int!
     riskLevel: RiskLevel!
@@ -540,6 +541,18 @@ type ScenarioSummary {
     description: String!
 }
 
+enum VesselDataSource {
+    mock
+    aisstream
+}
+
+type WatchDataSourceStatus {
+    id: VesselDataSource!
+    enabled: Boolean!
+    status: String!
+    vesselCount: Int!
+}
+
 type WatchState {
     scenarioId: ID!
     title: String!
@@ -557,6 +570,7 @@ type WatchState {
     osintAlerts: [OsintAlert!]!
     highRiskZones: [HighRiskZone!]!
     protectedAssets: [ProtectedAsset!]!
+    dataSources: [WatchDataSourceStatus!]!
 }
 
 type VesselIntelligenceCitation {

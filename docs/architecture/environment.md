@@ -59,6 +59,7 @@ Capability-optional fields today (typed as `string | undefined`, validated at th
 
 - `googleGenerativeAiApiKey` — LLM clients in `serverRuntimeCreate`
 - `serverTokenSecret` — HMAC tokens for `/server/*` browser-capture routes (`serverToken.ts`)
+- `aisStreamApiKey` — AISStream WebSocket ingest (`aisStreamIngestEnsureStarted`); related config: `aisStreamBoundingBox`, `aisMockEnabled`
 
 For these, do **not** add the key to `requiredEnvironmentVariables`. Instead:
 

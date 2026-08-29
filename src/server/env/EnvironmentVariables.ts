@@ -27,6 +27,22 @@ export interface EnvironmentVariables {
     // short-lived HMAC tokens that authenticate server-side renders against
     // `/server/*` routes. See `docs/architecture/browser-capture.md`.
     serverTokenSecret: string | undefined;
+    // Optional AISStream API key. When set, `aisStreamIngestEnsureStarted`
+    // opens a server-side WebSocket and persists positions. See
+    // `docs/architecture/maritime-watch.md`.
+    aisStreamApiKey: string | undefined;
+    // Optional AISStream bounding box as
+    // `southLat,westLon,northLat,eastLon`. Defaults to the Red Sea / Bab
+    // el-Mandeb theater used by the Galaxy Leader demo.
+    aisStreamBoundingBox: {
+        southLat: number;
+        westLon: number;
+        northLat: number;
+        eastLon: number;
+    };
+    // When true (default), the Galaxy Leader mock feeder streams demo vessels
+    // into the fused watch board alongside AISStream.
+    aisMockEnabled: boolean;
     // Per-deploy salt mixed into the SHA-256 of every visitor request's
     // client IP before it lands in `Sessions.ipHash`. Salting means a DB
     // leak does not expose visitor IPs and two deploys cannot be

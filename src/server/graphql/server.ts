@@ -2,7 +2,11 @@ import { ApolloServer } from '@apollo/server';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { parse, subscribe } from 'graphql';
 import { serverRuntimeCreate } from '../domain/serverRuntimeCreate';
+import { environmentVariables } from '../env/environmentVariablesCreate';
 import { ensureJobsStarted } from '../jobs';
+import { aisStreamIngestEnsureStarted } from '../maritime/aisStreamIngest';
+import { mockScenarioSourceEnsureStarted } from '../maritime/sources/mockScenarioSource';
+import { watchBoardTickDriverStart } from '../maritime/watchBoardTickDriver';
 import type { GqlSSession } from './generated';
 import { resolversCreate } from './resolversCreate';
 import schemaSource from './schema.graphqls?raw';
@@ -21,6 +25,9 @@ let serverStarted = false;
 async function ensureServerStarted() {
     if (!serverStarted) {
         await graphqlServer.start();
+        mockScenarioSourceEnsureStarted(serverRuntime, environmentVariables);
+        aisStreamIngestEnsureStarted(serverRuntime, environmentVariables);
+        watchBoardTickDriverStart(serverRuntime);
         await ensureJobsStarted(serverRuntime);
         serverStarted = true;
     }
@@ -61,6 +68,8 @@ export async function executeGraphQLSubscription(
     variables: Record<string, any>,
     session: GqlSSession,
 ): Promise<AsyncIterableIterator<any>> {
+    await ensureServerStarted();
+
     const document = parse(query);
 
     const result = await subscribe({

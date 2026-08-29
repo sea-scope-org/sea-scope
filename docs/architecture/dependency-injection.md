@@ -33,6 +33,10 @@ field. Do not mirror the full TypeScript interface in this doc; it drifts. Capab
   [browser-capture.md](./browser-capture.md). Tests stub these to return a fixed `Buffer` and never launch a real browser. The
   `SERVER_TOKEN_SECRET` validation lives at the call site (`serverToken.ts`), not at boot.
 
+AISStream ingest and the Galaxy Leader mock feeder are **not** `ServerRuntime` fields — they are process-global capabilities started from
+`ensureServerStarted` via `mockScenarioSourceEnsureStarted` / `aisStreamIngestEnsureStarted` / `watchBoardTickDriverStart` (see
+[maritime-watch.md](./maritime-watch.md)).
+
 ### Factory
 
 `serverRuntimeCreate()` in `src/server/domain/serverRuntimeCreate.ts` creates the runtime:

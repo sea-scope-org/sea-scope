@@ -27,7 +27,7 @@ docs/
 │   ├── i18n.md                   # English-only locale stance
 │   ├── jobs.md                   # pg-boss background jobs
 │   ├── logging.md                # PostgreSQL-backed logger
-│   ├── maritime-watch.md         # In-memory scenario player + rule-based risk engine
+│   ├── maritime-watch.md         # Fused mock + AISStream watch board + risk engine
 │   ├── server-architecture.md    # Server-side domain logic structure (CQRS)
 │   └── state-synchronization.md  # Client-server state sync via subscriptions
 ├── styles/                       # Visual / interaction design rules

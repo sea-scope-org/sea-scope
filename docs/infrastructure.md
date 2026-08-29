@@ -41,11 +41,14 @@ by `src/server/env/environmentVariablesCreate.ts` — see [architecture/environm
 | `WEB_PAGE_URL`                 | Yes      | Absolute origin of the deployed site, no trailing slash (e.g. `https://example.com`). Drives canonical URLs, the dynamic `/sitemap.xml`, and `/robots.txt` — see [architecture/discovery-seo.md](./architecture/discovery-seo.md)                      |
 | `VISITOR_IP_HASH_SALT`         | Yes      | Per-deploy salt mixed into `SHA256(salt + ":" + clientIp)` before it lands in `Sessions.ipHash`. Generate with `openssl rand -hex 32`; treat as a secret — see [architecture/authentication.md](./architecture/authentication.md)                      |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Yes      | Google Generative AI API key. Validated when `serverRuntimeCreate` builds the Gemini language model                                                                                                                                                    |
+| `AISSTREAM_API_KEY`            | No\*     | AISStream WebSocket API key. When set, live AIS fuses into the watch board and persists to `Vessels` / `AisPositions` — see [architecture/maritime-watch.md](./architecture/maritime-watch.md)                                                         |
+| `AISSTREAM_BBOX`               | No       | Optional `southLat,westLon,northLat,eastLon` for AISStream (default `12,41,16,44` — Red Sea / Bab el-Mandeb)                                                                                                                                           |
+| `AIS_MOCK_ENABLED`             | No       | `true` (default) or `false`. When true, Galaxy Leader mock tracks stream into the same fused board as live AIS                                                                                                                                         |
 | `SERVER_TOKEN_SECRET`          | No\*     | HMAC secret signing short-lived server-side render tokens. Required only by features that call `serverRuntime.browser.capture()` against an authenticated `/server/*` route — see [architecture/browser-capture.md](./architecture/browser-capture.md) |
 | `sessionCookieSecure`          | No       | Set to `"true"` in production to enable Secure + SameSite=None                                                                                                                                                                                         |
 | `sessionCookieDomainScope`     | No       | Cookie domain scope for cross-subdomain sessions                                                                                                                                                                                                       |
 
-\* `SERVER_TOKEN_SECRET` is capability-optional — validated at the browser-capture call site, not at boot.
+\* `AISSTREAM_API_KEY` and `SERVER_TOKEN_SECRET` are capability-optional — validated at the ingest / browser-capture sites, not at boot.
 
 `VERCEL_GIT_COMMIT_SHA` is injected by Vercel; you do not set it manually. Override with `BUILD_SHA` only if you need a custom version
 string.

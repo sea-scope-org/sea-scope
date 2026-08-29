@@ -76,6 +76,25 @@ export function WatchToolbar({ watch, countedVessels, filters, shipTypeCatalog, 
                         </Badge>
                     </>
                 ) : null}
+
+                {watch.dataSources.length > 0 ? (
+                    <>
+                        <Separator orientation="vertical" className="h-5" />
+                        <ul className="flex flex-wrap items-center gap-1.5" aria-label="Data sources">
+                            {watch.dataSources.map((source) => (
+                                <li key={source.id}>
+                                    <Badge
+                                        variant="outline"
+                                        className="rounded-sm px-1.5 py-0 text-[10px] font-medium tracking-wide text-muted-foreground uppercase"
+                                        title={`${source.id}: ${source.status}`}
+                                    >
+                                        {source.id === 'aisstream' ? 'live' : 'demo'} {source.vesselCount}
+                                    </Badge>
+                                </li>
+                            ))}
+                        </ul>
+                    </>
+                ) : null}
             </div>
 
             <div className="ml-auto flex items-center gap-1">

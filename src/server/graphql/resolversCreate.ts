@@ -3,7 +3,15 @@ import { DateResolver, DateTimeResolver, JSONResolver } from 'graphql-scalars';
 import { chatInputCollectionRespond } from '../commands/chatInputCollectionRespond';
 import { chatMessageCreate } from '../commands/chatMessageCreate';
 import { chatToolApprovalRespond } from '../commands/chatToolApprovalRespond';
-import { alertAcknowledge, scenarioEnsureLive, scenarioReset, vesselIntelligenceRequest, vesselSelect } from '../commands/scenarioControl';
+import {
+    alertAcknowledge,
+    scenarioEnsureLive,
+    scenarioReset,
+    vesselIntelligenceRequest,
+    vesselSelect,
+    watchAnomalyForSession,
+    watchStateForSession,
+} from '../commands/scenarioControl';
 import { userSessionTerminateMany } from '../commands/userSessionTerminateMany';
 import { userUpdate } from '../commands/userUpdate';
 import { users } from '../db/schema';
@@ -13,8 +21,8 @@ import { guardUserMutation } from '../guards/guardUserMutation';
 import { guardUserSubscription } from '../guards/guardUserSubscription';
 import { sessionOperatorEnsure } from '../guards/sessionOperatorEnsure';
 import { toGqlChatAssistantBodyBlock, toGqlChatMessage } from '../mappers/toGqlChatMessage';
-import { toGqlAnomaly, toGqlScenarioSummary, toGqlVesselIntelligence, toGqlWatchState } from '../mappers/toGqlWatch';
-import { scenarioCatalogList, scenarioDefinitionGet, scenarioPlayerGet } from '../maritime/scenarioRuntime';
+import { toGqlAnomaly, toGqlScenarioSummary, toGqlVesselIntelligence } from '../mappers/toGqlWatch';
+import { scenarioCatalogList } from '../maritime/scenarioRuntime';
 import { vesselIntelligenceGet } from '../maritime/vesselIntelligenceStore';
 import { chatFindOne } from '../queries/chatFindOne';
 import { chatMessageRowLoad } from '../queries/chatMessageRowLoad';
@@ -279,18 +287,15 @@ export function resolversCreate(serverRuntime: ServerRuntime): GqlSResolvers {
                 async resolve(payload: SessionUpdateWirePayload, _: unknown, requestingSession: GqlSSession): Promise<GqlSSessionUpdate> {
                     switch (payload.kind) {
                         case 'watchSnapshot': {
-                            const state = scenarioPlayerGet(requestingSession.sessionId);
-                            if (!state) throw new Error('sessionUpdates: watch state missing');
-                            const scenario = scenarioDefinitionGet(state.scenarioId);
-                            if (!scenario) throw new Error('sessionUpdates: scenario missing');
+                            const watch = watchStateForSession(requestingSession.sessionId);
+                            if (!watch) throw new Error('sessionUpdates: watch state missing');
                             return {
                                 gqlTypeName: 'SessionUpdateWatchSnapshot',
-                                watch: toGqlWatchState(state, scenario),
+                                watch,
                             };
                         }
                         case 'anomalyAppended': {
-                            const state = scenarioPlayerGet(requestingSession.sessionId);
-                            const anomaly = state?.anomalies.find((a) => a.anomalyId === payload.anomalyId);
+                            const anomaly = watchAnomalyForSession(requestingSession.sessionId, payload.anomalyId);
                             if (!anomaly) throw new Error(`sessionUpdates: anomaly ${payload.anomalyId} not found`);
                             return {
                                 gqlTypeName: 'SessionUpdateAnomalyAppended',

@@ -2,33 +2,41 @@ import type { ServerRuntime } from '../domain/ServerRuntime';
 import type { GqlSMutationResult, GqlSSession, GqlSSessionMutation, GqlSWatchState } from '../graphql/generated';
 import { toGqlWatchState } from '../mappers/toGqlWatch';
 import {
-    DEFAULT_SCENARIO_ID,
-    scenarioDefinitionGet,
-    scenarioPlayerAcknowledgeAlert,
-    scenarioPlayerEnsure,
-    scenarioPlayerGet,
-    scenarioPlayerReset,
-    scenarioPlayerSelectVessel,
-} from '../maritime/scenarioRuntime';
-import { scenarioTickDriverIsRunning, scenarioTickDriverStart } from '../maritime/scenarioTickDriver';
+    watchBoardDataSources,
+    watchBoardOverlayScenario,
+    watchBoardSessionAcknowledgeAlert,
+    watchBoardSessionEnsure,
+    watchBoardSessionReset,
+    watchBoardSessionSelectVessel,
+    watchBoardSnapshot,
+} from '../maritime/watchBoardRuntime';
+import { watchBoardTickDriverIsRunning, watchBoardTickDriverStart } from '../maritime/watchBoardTickDriver';
 import { vesselIntelligenceRunDetached } from './vesselIntelligenceRun';
 
-/** Ensures the default scenario is running and the tick driver is attached. */
+function fusedWatchState(sessionId: string): GqlSWatchState {
+    const scenario = watchBoardOverlayScenario();
+    const state = watchBoardSnapshot(sessionId, scenario);
+    return toGqlWatchState(state, scenario, watchBoardDataSources());
+}
+
+/** Ensures the fused watch board (mock + live) is running for this session. */
 export function scenarioEnsureLive(sessionId: string, serverRuntime: ServerRuntime): GqlSWatchState {
-    const existing = scenarioPlayerGet(sessionId);
-    const wasRunning = existing?.status === 'running';
-    const state = scenarioPlayerEnsure(sessionId, DEFAULT_SCENARIO_ID);
-    const scenario = scenarioDefinitionGet(state.scenarioId);
-    if (!scenario) throw new Error(`Unknown scenario: ${state.scenarioId}`);
-
-    if (!scenarioTickDriverIsRunning(sessionId)) {
-        scenarioTickDriverStart(sessionId, serverRuntime, {
-            // Re-attach after a lost timer without wiping an in-progress brief.
-            clearIntelligence: !wasRunning,
-        });
+    if (!watchBoardTickDriverIsRunning()) {
+        watchBoardTickDriverStart(serverRuntime);
     }
+    watchBoardSessionEnsure(sessionId);
+    return fusedWatchState(sessionId);
+}
 
-    return toGqlWatchState(state, scenario);
+export function watchStateForSession(sessionId: string): GqlSWatchState | null {
+    watchBoardSessionEnsure(sessionId);
+    return fusedWatchState(sessionId);
+}
+
+export function watchAnomalyForSession(sessionId: string, anomalyId: string) {
+    const scenario = watchBoardOverlayScenario();
+    const state = watchBoardSnapshot(sessionId, scenario);
+    return state.anomalies.find((a) => a.anomalyId === anomalyId) ?? null;
 }
 
 export async function vesselSelect(
@@ -39,15 +47,12 @@ export async function vesselSelect(
 ): Promise<GqlSWatchState | null> {
     try {
         scenarioEnsureLive(parent.sessionId, serverRuntime);
-        const state = scenarioPlayerSelectVessel(parent.sessionId, args.mmsi);
-        if (!state) return null;
-        const scenario = scenarioDefinitionGet(state.scenarioId);
-        if (!scenario) return null;
+        watchBoardSessionSelectVessel(parent.sessionId, args.mmsi);
         await serverRuntime.publish.sessionUpdates({
             sessionId: parent.sessionId,
             payload: { kind: 'watchSnapshot' },
         });
-        return toGqlWatchState(state, scenario);
+        return watchStateForSession(parent.sessionId);
     } catch (error) {
         serverRuntime.log.error(error, requestingSession);
         return null;
@@ -83,15 +88,13 @@ export async function alertAcknowledge(
 ): Promise<GqlSWatchState | null> {
     try {
         scenarioEnsureLive(parent.sessionId, serverRuntime);
-        const state = scenarioPlayerAcknowledgeAlert(parent.sessionId, args.incidentId);
-        if (!state) return null;
-        const scenario = scenarioDefinitionGet(state.scenarioId);
-        if (!scenario) return null;
+        const ok = watchBoardSessionAcknowledgeAlert(parent.sessionId, args.incidentId);
+        if (!ok) return null;
         await serverRuntime.publish.sessionUpdates({
             sessionId: parent.sessionId,
             payload: { kind: 'watchSnapshot' },
         });
-        return toGqlWatchState(state, scenario);
+        return watchStateForSession(parent.sessionId);
     } catch (error) {
         serverRuntime.log.error(error, requestingSession);
         return null;
@@ -105,15 +108,15 @@ export async function scenarioReset(
     serverRuntime: ServerRuntime,
 ): Promise<GqlSWatchState | null> {
     try {
-        const state = scenarioPlayerReset(parent.sessionId, DEFAULT_SCENARIO_ID);
-        const scenario = scenarioDefinitionGet(state.scenarioId);
-        if (!scenario) return null;
-        scenarioTickDriverStart(parent.sessionId, serverRuntime, { clearIntelligence: true });
+        watchBoardSessionReset(parent.sessionId);
+        if (!watchBoardTickDriverIsRunning()) {
+            watchBoardTickDriverStart(serverRuntime);
+        }
         await serverRuntime.publish.sessionUpdates({
             sessionId: parent.sessionId,
             payload: { kind: 'watchSnapshot' },
         });
-        return toGqlWatchState(state, scenario);
+        return watchStateForSession(parent.sessionId);
     } catch (error) {
         serverRuntime.log.error(error, requestingSession);
         return null;

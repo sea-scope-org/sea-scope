@@ -144,8 +144,10 @@ function resolveDefaultPanel(input: { hasOpenIncident: boolean; riskEventCount: 
 
 function NavData({ vessel }: { vessel: Vessel }) {
     const position = vessel.position;
+    const sourceLabel = vessel.dataSource === 'aisstream' ? 'Live AIS' : 'Demo mock';
     return (
         <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+            <Field label="Source" value={sourceLabel} />
             <Field label="Type" value={vessel.shipType} />
             <Field label="Flag" value={vessel.flag} />
             <Field label="SOG" value={position ? `${position.sog.toFixed(1)} kn` : '—'} />

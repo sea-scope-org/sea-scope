@@ -4,9 +4,11 @@ import { googleAgentProviderOptionsFor } from '../agents/agentScaffolding';
 import type { ServerRuntime } from '../domain/ServerRuntime';
 import type { GqlSSession } from '../graphql/generated';
 import { osintForVessel } from '../maritime/osintForVessel';
-import { scenarioDefinitionGet, scenarioPlayerGet } from '../maritime/scenarioRuntime';
+import type { ScenarioPlayerState } from '../maritime/scenarioRuntime';
+import type { ScenarioDefinition } from '../maritime/types';
 import { vesselIntelligencePut } from '../maritime/vesselIntelligenceStore';
 import type { VesselIntelligence } from '../maritime/vesselIntelligenceStore';
+import { watchBoardOverlayScenario, watchBoardSessionEnsure, watchBoardSnapshot } from '../maritime/watchBoardRuntime';
 
 const MARITIME_MODEL_ID = 'gemini-3.6-flash';
 
@@ -24,6 +26,12 @@ const vesselIntelligenceOutputSchema = z.object({
         .min(1),
     playbookSteps: z.array(z.string()).min(2).max(6).describe('Numbered actionable response steps'),
 });
+
+function watchPacketForIntelligence(sessionId: string): { state: ScenarioPlayerState; scenario: ScenarioDefinition } {
+    watchBoardSessionEnsure(sessionId);
+    const scenario = watchBoardOverlayScenario();
+    return { state: watchBoardSnapshot(sessionId, scenario), scenario };
+}
 
 export function vesselIntelligenceRunDetached(args: {
     sessionId: string;
@@ -47,10 +55,7 @@ async function vesselIntelligenceRun({
     requestingSession: GqlSSession;
     serverRuntime: ServerRuntime;
 }): Promise<void> {
-    const state = scenarioPlayerGet(sessionId);
-    if (!state) throw new Error(`No watch state for session ${sessionId}`);
-    const scenario = scenarioDefinitionGet(state.scenarioId);
-    if (!scenario) throw new Error(`Unknown scenario ${state.scenarioId}`);
+    const { state, scenario } = watchPacketForIntelligence(sessionId);
 
     const vessel = state.vessels.find((v) => v.mmsi === mmsi);
     if (!vessel) throw new Error(`Unknown vessel ${mmsi}`);

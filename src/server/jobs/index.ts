@@ -30,6 +30,7 @@ export async function ensureJobsStarted(serverRuntime: ServerRuntime): Promise<v
     });
 }
 
+export { aisPositionsCleanup } from './handlers/aisPositionsCleanup';
 export { chatTitleGenerate } from './handlers/chatTitleGenerate';
 export { signupReminderSend } from './handlers/signupReminderSend';
 export { staleSessionsCleanup } from './handlers/staleSessionsCleanup';

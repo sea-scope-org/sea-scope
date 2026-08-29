@@ -11,6 +11,12 @@ fragment WatchFields on WatchState {
     centerLon
     zoom
     selectedMmsi
+    dataSources {
+        id
+        enabled
+        status
+        vesselCount
+    }
     vessels {
         mmsi
         name
@@ -18,6 +24,7 @@ fragment WatchFields on WatchState {
         shipType
         flag
         aisDark
+        dataSource
         riskScore
         riskLevel
         riskTrend

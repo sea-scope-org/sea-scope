@@ -45,20 +45,21 @@ Traditional VTS answers “what is happening?” Global intel answers “what do
 
 ## Options considered
 
-| Option                         | Pros                          | Cons                                      |
-| ------------------------------ | ----------------------------- | ----------------------------------------- |
-| Live AIS APIs                  | Realism                       | Brittle for a hackathon demo              |
-| Curated historical replay      | Deterministic pitch narrative | Not live                                  |
-| Black-box ML risk              | Fancy                         | Not explainable; wrong for MVP            |
-| Rule-based risk + factors      | Transparent; demo-friendly    | Threshold tuning                          |
-| Auth-gated operators           | Multi-user accountability     | Out of MVP scope                          |
-| Anonymous cookie sessions only | Fast demo, no login friction  | Identity is infra-only (Operator binding) |
+| Option                         | Pros                          | Cons                                          |
+| ------------------------------ | ----------------------------- | --------------------------------------------- |
+| Live AIS APIs (AISStream)      | Realism; free WebSocket       | Needs bbox + reconnect; coastal coverage only |
+| Curated historical replay      | Deterministic pitch narrative | Not live                                      |
+| Black-box ML risk              | Fancy                         | Not explainable; wrong for MVP                |
+| Rule-based risk + factors      | Transparent; demo-friendly    | Threshold tuning                              |
+| Auth-gated operators           | Multi-user accountability     | Out of MVP scope                              |
+| Anonymous cookie sessions only | Fast demo, no login friction  | Identity is infra-only (Operator binding)     |
 
 ## Option chosen
 
-Curated Galaxy Leader replay + rule-based risk engine (MAP → PRIORITY → WHY → ALERT) + anonymous cookie sessions + `sessionUpdates` SSE.
-Chat remains available under `Mutation.session` (silent Operator user for authorship FKs). No login/signup product surface. MapLibre chart
-kept (warm-tinted Carto Positron — bronze land / muted sea); risk styling and Cable C17 layered on top without geography rewrite.
+**Dual source fused board:** Galaxy Leader mock feeder + optional AISStream live ingest share one track store, risk engine, GraphQL
+`WatchState`, and Postgres tables tagged by `source`. Anonymous cookie sessions + `sessionUpdates` SSE. Chat remains under
+`Mutation.session` (silent Operator user for authorship FKs). No login/signup product surface. MapLibre chart kept (warm-tinted Carto
+Positron — bronze land / muted sea); risk styling and Cable C17 layered on top without geography rewrite.
 
 ## Out of scope (MVP)
 

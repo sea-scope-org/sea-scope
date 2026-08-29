@@ -11,6 +11,7 @@ import type {
     GqlSVessel,
     GqlSVesselIntelligence,
     GqlSVesselPosition,
+    GqlSWatchDataSourceStatus,
     GqlSWatchState,
 } from '../graphql/generated';
 import type { ScenarioPlayerState, ScenarioVesselState } from '../maritime/scenarioRuntime';
@@ -26,6 +27,7 @@ import type {
     ScenarioDefinition,
 } from '../maritime/types';
 import type { VesselIntelligence } from '../maritime/vesselIntelligenceStore';
+import type { WatchDataSourceStatus } from '../maritime/watchBoardRuntime';
 
 function toGqlLatLon(point: LatLon): GqlSLatLon {
     return { lat: point.lat, lon: point.lon };
@@ -62,6 +64,7 @@ function toGqlVessel(vessel: ScenarioVesselState): GqlSVessel {
         shipType: vessel.shipType,
         flag: vessel.flag,
         aisDark: vessel.aisDark,
+        dataSource: vessel.dataSource,
         position: vessel.position ? toGqlVesselPosition(vessel.position) : null,
         riskScore: vessel.riskScore,
         riskLevel: vessel.riskLevel,
@@ -150,7 +153,20 @@ function toGqlProtectedAsset(asset: ProtectedAsset): GqlSProtectedAsset {
     };
 }
 
-export function toGqlWatchState(state: ScenarioPlayerState, scenario: ScenarioDefinition): GqlSWatchState {
+function toGqlWatchDataSourceStatus(status: WatchDataSourceStatus): GqlSWatchDataSourceStatus {
+    return {
+        id: status.id,
+        enabled: status.enabled,
+        status: status.status,
+        vesselCount: status.vesselCount,
+    };
+}
+
+export function toGqlWatchState(
+    state: ScenarioPlayerState,
+    scenario: ScenarioDefinition,
+    dataSources: WatchDataSourceStatus[] = [],
+): GqlSWatchState {
     return {
         scenarioId: state.scenarioId,
         title: scenario.title,
@@ -168,6 +184,7 @@ export function toGqlWatchState(state: ScenarioPlayerState, scenario: ScenarioDe
         osintAlerts: scenario.osintAlerts.map(toGqlOsintAlert),
         highRiskZones: scenario.highRiskZones.map(toGqlHighRiskZone),
         protectedAssets: scenario.protectedAssets.map(toGqlProtectedAsset),
+        dataSources: dataSources.map(toGqlWatchDataSourceStatus),
     };
 }
 

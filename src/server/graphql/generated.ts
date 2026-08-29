@@ -627,6 +627,7 @@ export interface GqlSVessel {
     activeFactors: Array<GqlSRiskFactor>;
     aisDark: Scalars['Boolean']['output'];
     callSign?: Maybe<Scalars['String']['output']>;
+    dataSource: GqlSVesselDataSource;
     flag: Scalars['String']['output'];
     imo?: Maybe<Scalars['String']['output']>;
     mmsi: Scalars['ID']['output'];
@@ -641,6 +642,8 @@ export interface GqlSVessel {
     shipType: Scalars['String']['output'];
     trackTail: Array<GqlSLatLon>;
 }
+
+export type GqlSVesselDataSource = 'aisstream' | 'mock';
 
 export interface GqlSVesselIntelligence {
     __typename?: 'VesselIntelligence';
@@ -672,11 +675,20 @@ export interface GqlSVesselPosition {
     timestamp: Scalars['DateTime']['output'];
 }
 
+export interface GqlSWatchDataSourceStatus {
+    __typename?: 'WatchDataSourceStatus';
+    enabled: Scalars['Boolean']['output'];
+    id: GqlSVesselDataSource;
+    status: Scalars['String']['output'];
+    vesselCount: Scalars['Int']['output'];
+}
+
 export interface GqlSWatchState {
     __typename?: 'WatchState';
     anomalies: Array<GqlSAnomaly>;
     centerLat: Scalars['Float']['output'];
     centerLon: Scalars['Float']['output'];
+    dataSources: Array<GqlSWatchDataSourceStatus>;
     description: Scalars['String']['output'];
     highRiskZones: Array<GqlSHighRiskZone>;
     incidents: Array<GqlSIncident>;
@@ -921,9 +933,11 @@ export type GqlSResolversTypes = ResolversObject<{
     UserMutation: ResolverTypeWrapper<GqlSUserMutation>;
     UserUpdate: GqlSUserUpdate;
     Vessel: ResolverTypeWrapper<GqlSVessel>;
+    VesselDataSource: GqlSVesselDataSource;
     VesselIntelligence: ResolverTypeWrapper<GqlSVesselIntelligence>;
     VesselIntelligenceCitation: ResolverTypeWrapper<GqlSVesselIntelligenceCitation>;
     VesselPosition: ResolverTypeWrapper<GqlSVesselPosition>;
+    WatchDataSourceStatus: ResolverTypeWrapper<GqlSWatchDataSourceStatus>;
     WatchState: ResolverTypeWrapper<GqlSWatchState>;
     WatchStatus: GqlSWatchStatus;
 }>;
@@ -1023,6 +1037,7 @@ export type GqlSResolversParentTypes = ResolversObject<{
     VesselIntelligence: GqlSVesselIntelligence;
     VesselIntelligenceCitation: GqlSVesselIntelligenceCitation;
     VesselPosition: GqlSVesselPosition;
+    WatchDataSourceStatus: GqlSWatchDataSourceStatus;
     WatchState: GqlSWatchState;
 }>;
 
@@ -1801,6 +1816,7 @@ export type GqlSVesselResolvers<
     activeFactors?: Resolver<Array<GqlSResolversTypes['RiskFactor']>, ParentType, ContextType>;
     aisDark?: Resolver<GqlSResolversTypes['Boolean'], ParentType, ContextType>;
     callSign?: Resolver<Maybe<GqlSResolversTypes['String']>, ParentType, ContextType>;
+    dataSource?: Resolver<GqlSResolversTypes['VesselDataSource'], ParentType, ContextType>;
     flag?: Resolver<GqlSResolversTypes['String'], ParentType, ContextType>;
     imo?: Resolver<Maybe<GqlSResolversTypes['String']>, ParentType, ContextType>;
     mmsi?: Resolver<GqlSResolversTypes['ID'], ParentType, ContextType>;
@@ -1852,6 +1868,16 @@ export type GqlSVesselPositionResolvers<
     timestamp?: Resolver<GqlSResolversTypes['DateTime'], ParentType, ContextType>;
 }>;
 
+export type GqlSWatchDataSourceStatusResolvers<
+    ContextType = any,
+    ParentType extends GqlSResolversParentTypes['WatchDataSourceStatus'] = GqlSResolversParentTypes['WatchDataSourceStatus'],
+> = ResolversObject<{
+    enabled?: Resolver<GqlSResolversTypes['Boolean'], ParentType, ContextType>;
+    id?: Resolver<GqlSResolversTypes['VesselDataSource'], ParentType, ContextType>;
+    status?: Resolver<GqlSResolversTypes['String'], ParentType, ContextType>;
+    vesselCount?: Resolver<GqlSResolversTypes['Int'], ParentType, ContextType>;
+}>;
+
 export type GqlSWatchStateResolvers<
     ContextType = any,
     ParentType extends GqlSResolversParentTypes['WatchState'] = GqlSResolversParentTypes['WatchState'],
@@ -1859,6 +1885,7 @@ export type GqlSWatchStateResolvers<
     anomalies?: Resolver<Array<GqlSResolversTypes['Anomaly']>, ParentType, ContextType>;
     centerLat?: Resolver<GqlSResolversTypes['Float'], ParentType, ContextType>;
     centerLon?: Resolver<GqlSResolversTypes['Float'], ParentType, ContextType>;
+    dataSources?: Resolver<Array<GqlSResolversTypes['WatchDataSourceStatus']>, ParentType, ContextType>;
     description?: Resolver<GqlSResolversTypes['String'], ParentType, ContextType>;
     highRiskZones?: Resolver<Array<GqlSResolversTypes['HighRiskZone']>, ParentType, ContextType>;
     incidents?: Resolver<Array<GqlSResolversTypes['Incident']>, ParentType, ContextType>;
@@ -1949,6 +1976,7 @@ export type GqlSResolvers<ContextType = any> = ResolversObject<{
     VesselIntelligence?: GqlSVesselIntelligenceResolvers<ContextType>;
     VesselIntelligenceCitation?: GqlSVesselIntelligenceCitationResolvers<ContextType>;
     VesselPosition?: GqlSVesselPositionResolvers<ContextType>;
+    WatchDataSourceStatus?: GqlSWatchDataSourceStatusResolvers<ContextType>;
     WatchState?: GqlSWatchStateResolvers<ContextType>;
 }>;
 
@@ -2033,6 +2061,8 @@ export const GqlSRiskTrendSchema: z.ZodType<'falling' | 'rising' | 'stable', 'fa
     'rising',
     'stable',
 ]);
+
+export const GqlSVesselDataSourceSchema: z.ZodType<'aisstream' | 'mock', 'aisstream' | 'mock'> = z.enum(['aisstream', 'mock']);
 
 export const GqlSWatchStatusSchema: z.ZodType<'completed' | 'running', 'completed' | 'running'> = z.enum(['completed', 'running']);
 
