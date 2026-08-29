@@ -81,6 +81,8 @@ function WatchPage() {
     const focusGenerationRef = useRef(0);
     const autoSelectedRef = useRef(false);
     const mockToggleGenerationRef = useRef(0);
+    /** Sync lock — `mockToggleBusy` state alone can miss a double-click before re-render. */
+    const mockToggleBusyRef = useRef(false);
     const selectionGenerationRef = useRef(0);
     const viewportReportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const aisViewportReportRef = useRef(aisViewportReport);
@@ -144,48 +146,47 @@ function WatchPage() {
     intelligenceBusyRef.current = intelligenceBusy;
     vesselsRef.current = liveWatch.vessels;
 
-    // While Demo is toggling, keep the chrome honest immediately: button + badges flip
-    // now; on disable, drop mock contacts / theater overlays before the mutation returns.
+    // Demo chrome is driven by effective `mockEnabled` (optimistic override or server).
+    // Always strip mock contacts / theater overlays when Demo is off — not only while the
+    // mutation is in flight — so a late feeder tick cannot flicker demo content back on.
     // selectedMmsiOverride does the same for Case ↔ Queue so Back to queue is instant.
     const displayWatch = useMemo((): GqlCWatchFieldsFragment => {
         let next: GqlCWatchFieldsFragment = liveWatch;
 
-        if (mockEnabledOverride !== null) {
-            const dataSources = liveWatch.dataSources.map((source) =>
-                source.id === 'mock'
-                    ? {
-                          ...source,
-                          enabled: mockEnabledOverride,
-                          status: mockEnabledOverride ? 'running' : 'disabled',
-                          vesselCount: mockEnabledOverride ? source.vesselCount : 0,
-                      }
-                    : source,
-            );
+        const dataSources = liveWatch.dataSources.map((source) =>
+            source.id === 'mock'
+                ? {
+                      ...source,
+                      enabled: mockEnabled,
+                      status: mockEnabled ? (source.status === 'disabled' ? 'running' : source.status) : 'disabled',
+                      vesselCount: mockEnabled ? source.vesselCount : 0,
+                  }
+                : source,
+        );
 
-            if (mockEnabledOverride) {
-                next = {
-                    ...liveWatch,
-                    title: 'SeaScope watch — live + demo',
-                    dataSources,
-                };
-            } else {
-                const selectedWasMock =
-                    liveWatch.selectedMmsi != null &&
-                    liveWatch.vessels.some((v) => v.mmsi === liveWatch.selectedMmsi && v.dataSource === 'mock');
+        if (mockEnabled) {
+            next = {
+                ...liveWatch,
+                title: mockEnabledOverride === true ? 'SeaScope watch — live + demo' : liveWatch.title,
+                dataSources,
+            };
+        } else {
+            const selectedWasMock =
+                liveWatch.selectedMmsi != null &&
+                liveWatch.vessels.some((v) => v.mmsi === liveWatch.selectedMmsi && v.dataSource === 'mock');
 
-                next = {
-                    ...liveWatch,
-                    title: 'SeaScope watch — live',
-                    highRiskZones: [],
-                    osintAlerts: [],
-                    anomalies: [],
-                    riskEvents: [],
-                    incidents: [],
-                    vessels: liveWatch.vessels.filter((vessel) => vessel.dataSource !== 'mock'),
-                    dataSources,
-                    selectedMmsi: selectedWasMock ? null : liveWatch.selectedMmsi,
-                };
-            }
+            next = {
+                ...liveWatch,
+                title: 'SeaScope watch — live',
+                highRiskZones: [],
+                osintAlerts: [],
+                anomalies: [],
+                riskEvents: [],
+                incidents: [],
+                vessels: liveWatch.vessels.filter((vessel) => vessel.dataSource !== 'mock'),
+                dataSources,
+                selectedMmsi: selectedWasMock ? null : liveWatch.selectedMmsi,
+            };
         }
 
         if (selectedMmsiOverride !== undefined) {
@@ -193,7 +194,7 @@ function WatchPage() {
         }
 
         return next;
-    }, [liveWatch, mockEnabledOverride, selectedMmsiOverride]);
+    }, [liveWatch, mockEnabled, mockEnabledOverride, selectedMmsiOverride]);
 
     selectedMmsiRef.current = displayWatch.selectedMmsi ?? null;
 
@@ -322,7 +323,8 @@ function WatchPage() {
 
     const onMockAisToggle = useCallback(
         async (enabled: boolean) => {
-            if (mockToggleBusy) return;
+            if (mockToggleBusyRef.current) return;
+            mockToggleBusyRef.current = true;
 
             const generation = ++mockToggleGenerationRef.current;
             const selectedWasMock =
@@ -351,6 +353,7 @@ function WatchPage() {
 
             const next = result.data?.session.mockAisSetEnabled;
             if (result.error || !next) {
+                mockToggleBusyRef.current = false;
                 setMockEnabledOverride(null);
                 setMockToggleBusy(false);
                 toast.error(enabled ? 'Could not enable demo stream.' : 'Could not disable demo stream.');
@@ -358,10 +361,11 @@ function WatchPage() {
             }
 
             applyWatch(next);
+            mockToggleBusyRef.current = false;
             setMockEnabledOverride(null);
             setMockToggleBusy(false);
         },
-        [applyWatch, clearIntelligence, liveWatch.selectedMmsi, liveWatch.vessels, mockAisSetEnabled, mockToggleBusy, requestChartFocus],
+        [applyWatch, clearIntelligence, liveWatch.selectedMmsi, liveWatch.vessels, mockAisSetEnabled, requestChartFocus],
     );
 
     const onViewportChange = useCallback((bounds: { southLat: number; westLon: number; northLat: number; eastLon: number }) => {
@@ -400,7 +404,7 @@ function WatchPage() {
 
     useEffect(() => {
         if (!intelligenceBusy || !intelligence) return;
-        if (intelligence.mmsi === displayWatch.selectedMmsi) {
+        if (intelligence.mmsi === displayWatch.selectedMmsi && intelligence.complete) {
             setIntelligenceBusy(false);
         }
     }, [displayWatch.selectedMmsi, intelligence, intelligenceBusy]);

@@ -90,6 +90,6 @@ function handleUpdate(
         return;
     }
 
-    // SessionUpdateIntelligence
+    // SessionUpdateIntelligence — replace in place so progressive partials swap cleanly.
     setIntelligence(update.intelligence);
 }

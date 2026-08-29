@@ -12,6 +12,8 @@ export type VesselIntelligence = {
     citations: VesselIntelligenceCitation[];
     playbookSteps: string[];
     generatedAt: string;
+    /** False while structured fields are still streaming; true when final. */
+    complete: boolean;
 };
 
 const bySession = new Map<string, Map<string, VesselIntelligence>>();

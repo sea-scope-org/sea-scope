@@ -1,14 +1,15 @@
-import { ChevronDownIcon, LocateFixedIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ChevronDownIcon, LinkIcon, LocateFixedIcon } from 'lucide-react';
+import { useState } from 'react';
+import { Alert, AlertDescription } from '../components/base/alert';
 import { Badge } from '../components/base/badge';
 import { Button } from '../components/base/button';
-import { Spinner } from '../components/base/spinner';
+import { Skeleton } from '../components/base/skeleton';
 import type { GqlCVesselIntelligence } from '../graphql/generated';
 import { cn } from '../utils/cn';
-import { assetName, IntelligenceBrief, RiskBadge, TrendIcon } from './watchSidebarShared';
+import { assetName, RiskBadge, TrendIcon } from './watchSidebarShared';
 import type { Anomaly, Incident, RiskEvent, Vessel, WatchState } from './watchSidebarShared';
 
-type EvidencePanel = 'timeline' | 'anomalies' | 'brief';
+type EvidencePanel = 'timeline' | 'anomalies';
 
 export interface WatchCaseProps {
     watch: WatchState;
@@ -38,28 +39,14 @@ export function WatchCase({
     const vesselRiskEvents = watch.riskEvents.filter((e) => e.mmsi === vessel.mmsi);
     const vesselIncident = watch.incidents.find((i) => i.mmsi === vessel.mmsi && i.status !== 'closed') ?? null;
     const briefForSelection = intelligence && intelligence.mmsi === vessel.mmsi ? intelligence : null;
+    const briefStreaming = Boolean(briefForSelection && !briefForSelection.complete);
 
-    const defaultPanel = resolveDefaultPanel({
-        hasOpenIncident: vesselIncident?.status === 'open',
-        riskEventCount: vesselRiskEvents.length,
-        hasBrief: Boolean(briefForSelection),
-        intelligenceBusy,
-    });
-    const [panel, setPanel] = useState<EvidencePanel>(defaultPanel);
+    const [panel, setPanel] = useState<EvidencePanel>('timeline');
     const [navOpen, setNavOpen] = useState(false);
-
-    useEffect(() => {
-        if (intelligenceBusy) setPanel('brief');
-    }, [intelligenceBusy]);
-
-    useEffect(() => {
-        if (briefForSelection) setPanel('brief');
-    }, [briefForSelection]);
 
     const factors = [...vessel.activeFactors].reverse().slice(0, 3);
 
     const requestBriefing = () => {
-        setPanel('brief');
         onRequestIntelligence(vessel.mmsi);
     };
 
@@ -100,13 +87,6 @@ export function WatchCase({
                     <p className="text-[11px] text-amber-800">Contact left the live board — showing last known state.</p>
                 ) : null}
 
-                {intelligenceBusy ? (
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                        <Spinner className="size-3.5" aria-hidden />
-                        Generating briefing…
-                    </div>
-                ) : null}
-
                 <div>
                     <button
                         type="button"
@@ -138,14 +118,7 @@ export function WatchCase({
 
                 <div className="flex flex-wrap gap-2">
                     <Button type="button" size="xs" disabled={intelligenceBusy || contactMissing} onClick={requestBriefing}>
-                        {intelligenceBusy ? (
-                            <>
-                                <Spinner data-icon="inline-start" aria-hidden />
-                                Running…
-                            </>
-                        ) : (
-                            'Request briefing'
-                        )}
+                        {intelligenceBusy ? 'Generating…' : 'Request briefing'}
                     </Button>
                     {vesselIncident?.status === 'open' ? (
                         <Button type="button" size="xs" variant="destructive" onClick={() => onAcknowledgeAlert(vesselIncident.incidentId)}>
@@ -160,26 +133,18 @@ export function WatchCase({
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col">
-                <EvidenceTabs panel={panel} onPanelChange={setPanel} anomalyCount={vesselAnomalies.length} briefBusy={intelligenceBusy} />
-                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-                    {panel === 'timeline' ? <TimelinePanel riskEvents={vesselRiskEvents} incident={vesselIncident} /> : null}
-                    {panel === 'anomalies' ? <AnomaliesPanel anomalies={vesselAnomalies} /> : null}
-                    {panel === 'brief' ? <BriefPanel intelligence={briefForSelection} busy={intelligenceBusy} /> : null}
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                    <IntelligenceStage intelligence={briefForSelection} busy={intelligenceBusy || briefStreaming} />
+
+                    <EvidenceTabs panel={panel} onPanelChange={setPanel} anomalyCount={vesselAnomalies.length} />
+                    <div className="px-4 py-3">
+                        {panel === 'timeline' ? <TimelinePanel riskEvents={vesselRiskEvents} incident={vesselIncident} /> : null}
+                        {panel === 'anomalies' ? <AnomaliesPanel anomalies={vesselAnomalies} /> : null}
+                    </div>
                 </div>
             </div>
         </div>
     );
-}
-
-function resolveDefaultPanel(input: {
-    hasOpenIncident: boolean;
-    riskEventCount: number;
-    hasBrief: boolean;
-    intelligenceBusy: boolean;
-}): EvidencePanel {
-    if (input.intelligenceBusy || input.hasBrief) return 'brief';
-    if (input.hasOpenIncident || input.riskEventCount > 0) return 'timeline';
-    return 'timeline';
 }
 
 function NavData({ vessel }: { vessel: Vessel }) {
@@ -211,21 +176,18 @@ function EvidenceTabs({
     panel,
     onPanelChange,
     anomalyCount,
-    briefBusy,
 }: {
     panel: EvidencePanel;
     onPanelChange: (panel: EvidencePanel) => void;
     anomalyCount: number;
-    briefBusy: boolean;
 }) {
     const tabs: { id: EvidencePanel; label: string }[] = [
         { id: 'timeline', label: 'Timeline' },
         { id: 'anomalies', label: anomalyCount > 0 ? `Anomalies (${anomalyCount})` : 'Anomalies' },
-        { id: 'brief', label: briefBusy ? 'Brief…' : 'Brief' },
     ];
 
     return (
-        <div role="tablist" aria-label="Evidence" className="flex shrink-0 gap-0 border-b border-sidebar-border px-2">
+        <div role="tablist" aria-label="Evidence" className="flex shrink-0 gap-0 border-y border-sidebar-border px-2">
             {tabs.map((tab) => {
                 const selected = panel === tab.id;
                 return (
@@ -320,17 +282,155 @@ function AnomaliesPanel({ anomalies }: { anomalies: Anomaly[] }) {
     );
 }
 
-function BriefPanel({ intelligence, busy }: { intelligence: GqlCVesselIntelligence | null; busy: boolean }) {
-    if (intelligence) {
-        return <IntelligenceBrief intelligence={intelligence} />;
-    }
-    if (busy) {
-        return (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Spinner className="size-3.5" aria-hidden />
-                Generating briefing…
+function IntelligenceStage({ intelligence, busy }: { intelligence: GqlCVesselIntelligence | null; busy: boolean }) {
+    return (
+        <section className="border-b border-sidebar-border px-4 py-3" aria-busy={busy} aria-live="polite">
+            <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Intelligence</p>
+                {busy ? <span className="shimmer text-[11px] text-muted-foreground">Analyzing contact…</span> : null}
             </div>
-        );
-    }
-    return <p className="text-xs text-muted-foreground">No briefing yet — request starts the analysis.</p>;
+            {intelligence ? (
+                <IntelligenceBrief intelligence={intelligence} streaming={busy || !intelligence.complete} />
+            ) : busy ? (
+                <BriefSkeleton />
+            ) : (
+                <p className="text-xs text-muted-foreground">No briefing yet — request starts the analysis.</p>
+            )}
+        </section>
+    );
+}
+
+function BriefSkeleton() {
+    return (
+        <div className="flex flex-col gap-3" aria-hidden>
+            <div className="rounded-md border border-primary/20 bg-primary/5 px-2.5 py-2">
+                <Skeleton className="mb-2 h-3 w-28" />
+                <Skeleton className="h-3.5 w-full" />
+                <Skeleton className="mt-1.5 h-3.5 w-[92%]" />
+                <Skeleton className="mt-1.5 h-3.5 w-4/5" />
+            </div>
+            <div>
+                <Skeleton className="mb-1.5 h-2.5 w-20" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="mt-1.5 h-3 w-[88%]" />
+            </div>
+            <div>
+                <Skeleton className="mb-1.5 h-2.5 w-16" />
+                <Skeleton className="h-3 w-3/4" />
+                <Skeleton className="mt-1.5 h-3 w-2/3" />
+            </div>
+            <div>
+                <Skeleton className="mb-1.5 h-2.5 w-36" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="mt-1.5 h-3 w-[85%]" />
+            </div>
+        </div>
+    );
+}
+
+function IntelligenceBrief({ intelligence, streaming }: { intelligence: GqlCVesselIntelligence; streaming: boolean }) {
+    const hasStatus = intelligence.status.length > 0;
+    const hasSummary = intelligence.summary.length > 0;
+    const hasWhy = intelligence.whyFlagged.length > 0;
+    const hasCitations = intelligence.citations.length > 0;
+    const hasPlaybook = intelligence.playbookSteps.length > 0;
+    const showSummarySkeleton = streaming && !hasSummary && !hasStatus;
+    const showWhySkeleton = streaming && !hasWhy;
+    const showCitationsSkeleton = streaming && !hasCitations;
+    const showPlaybookSkeleton = streaming && !hasPlaybook;
+
+    return (
+        <div className="flex flex-col gap-3">
+            {hasStatus || hasSummary ? (
+                <Alert className="border-primary/30 bg-primary/5 px-2.5 py-2">
+                    {hasStatus ? (
+                        <Badge
+                            variant="outline"
+                            className="col-span-full mb-1 rounded-sm border-primary/40 bg-transparent px-0 text-[10px] font-semibold tracking-wider text-primary uppercase"
+                        >
+                            {intelligence.status}
+                        </Badge>
+                    ) : streaming ? (
+                        <Skeleton className="col-span-full mb-1 h-3 w-28" />
+                    ) : null}
+                    {hasSummary ? (
+                        <AlertDescription className="col-span-full text-sm/snug text-foreground">
+                            {intelligence.summary}
+                            {streaming && !intelligence.complete ? <span className="ml-0.5 inline-block text-primary">▍</span> : null}
+                        </AlertDescription>
+                    ) : streaming ? (
+                        <div className="col-span-full space-y-1.5" aria-hidden>
+                            <Skeleton className="h-3.5 w-full" />
+                            <Skeleton className="h-3.5 w-[90%]" />
+                        </div>
+                    ) : null}
+                </Alert>
+            ) : showSummarySkeleton ? (
+                <div className="rounded-md border border-primary/20 bg-primary/5 px-2.5 py-2" aria-hidden>
+                    <Skeleton className="mb-2 h-3 w-28" />
+                    <Skeleton className="h-3.5 w-full" />
+                    <Skeleton className="mt-1.5 h-3.5 w-[92%]" />
+                </div>
+            ) : null}
+
+            {hasWhy ? (
+                <div>
+                    <p className="mb-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Why flagged</p>
+                    <p className="text-xs text-foreground">
+                        {intelligence.whyFlagged}
+                        {streaming && !hasCitations && !hasPlaybook ? <span className="ml-0.5 inline-block text-primary">▍</span> : null}
+                    </p>
+                </div>
+            ) : showWhySkeleton ? (
+                <div aria-hidden>
+                    <Skeleton className="mb-1.5 h-2.5 w-20" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="mt-1.5 h-3 w-[88%]" />
+                </div>
+            ) : null}
+
+            {hasCitations ? (
+                <div>
+                    <p className="mb-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Citations</p>
+                    <ul className="flex flex-col gap-1">
+                        {intelligence.citations.map((citation) => (
+                            <li
+                                key={`${citation.label}-${citation.source}`}
+                                className="flex items-start gap-1.5 text-[11px] text-foreground"
+                                title={citation.source}
+                            >
+                                <LinkIcon className="mt-0.5 size-3 shrink-0 text-primary" aria-hidden />
+                                <span>{citation.label}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            ) : showCitationsSkeleton ? (
+                <div aria-hidden>
+                    <Skeleton className="mb-1.5 h-2.5 w-16" />
+                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="mt-1.5 h-3 w-2/3" />
+                </div>
+            ) : null}
+
+            {hasPlaybook ? (
+                <div>
+                    <p className="mb-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                        Recommended verification
+                    </p>
+                    <ol className="flex list-decimal flex-col gap-1 pl-4 text-[11px] text-foreground">
+                        {intelligence.playbookSteps.map((step) => (
+                            <li key={step}>{step}</li>
+                        ))}
+                    </ol>
+                </div>
+            ) : showPlaybookSkeleton ? (
+                <div aria-hidden>
+                    <Skeleton className="mb-1.5 h-2.5 w-36" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="mt-1.5 h-3 w-[85%]" />
+                </div>
+            ) : null}
+        </div>
+    );
 }

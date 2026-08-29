@@ -10,10 +10,11 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 3. The fused watch board is live on load with **live AISStream** positions when `AISSTREAM_API_KEY` is set (always the configured
    `AISSTREAM_BBOX`, plus any connected operators’ chart viewports under 5° via `aisViewportReport`). The **Galaxy Leader demo** stream is
    **off by default** — enable it with the toolbar **Demo** button (`mockAisSetEnabled`). The button flips immediately (optimistic pressed
-   state + in-flight lock); turning Demo off also hides mock contacts and theater overlays at once, and only restores chart overview when
-   Case was on a demo contact. Real undersea cables and pipelines (OpenStreetMap, true WGS84) stay on the chart either way. While Demo is
-   off, high-risk zones, simulated radar, and theater OSINT are hidden so live traffic is not scored against demo-only geometry. Toolbar
-   badges show live (and demo, when on) vessel counts. **Reset** clears selection / risk stickies for the session.
+   state + in-flight lock). While Demo is off — including after the mutation settles — the client always hides mock contacts and theater
+   overlays so a late feeder tick cannot flicker demo content back on. Turning Demo off only restores chart overview when Case was on a demo
+   contact. Real undersea cables and pipelines (OpenStreetMap, true WGS84) stay on the chart either way. While Demo is off, high-risk zones,
+   simulated radar, and theater OSINT are hidden so live traffic is not scored against demo-only geometry. Toolbar badges show live (and
+   demo, when on) vessel counts. **Reset** clears selection / risk stickies for the session.
 4. Toolbar **Filters** toggles chart layers (protected assets, high-risk zones, track tails, radar contacts) and vessel `shipType`s. Filters
    are client-only and shared by the chart, Queue, and toolbar band counts (all on by default; **Show all** resets). A vessel already in
    **Case** stays on the map if its type is unchecked; Queue still hides unchecked types.
@@ -33,49 +34,52 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
    filters. Theater OSINT is a collapsed disclosure at the bottom. Band counts live in the toolbar, not the rail.
 10. Sidebar **Case** (vessel selected): sticky on `selectedMmsi` — if the contact drops off the live board, Case keeps the last-known vessel
     (with a short note) instead of silently returning to Queue. Sticky identity + Why now (top factors) + primary **Request briefing** /
-    Acknowledge / Locate on chart; evidence is one panel at a time (Timeline | Anomalies | Brief). Requesting a briefing (or receiving one)
-    opens the Brief panel; progress also shows in the Case header. Timeline merges risk-score changes and incident events. OSINT is not
-    shown in Case. **Back to queue** clears selection optimistically (Queue appears immediately; chart overview restores without waiting on
-    `vesselSelect`) and locks queue picks until the mutation settles.
-11. **Request briefing** ACKs via `vesselIntelligenceRequest` then shows progress until `SessionUpdateIntelligence` (toast on start failure
-    / timeout; Gemini failures may still publish a stub brief).
+    Acknowledge / Locate on chart. The **Intelligence** stage sits below the actions (always visible): empty CTA, shimmer skeleton while
+    waiting, then progressive structured fields as they stream. Evidence tabs below are Timeline | Anomalies only. Timeline merges
+    risk-score changes and incident events. OSINT is not shown in Case. **Back to queue** clears selection optimistically (Queue appears
+    immediately; chart overview restores without waiting on `vesselSelect`) and locks queue picks until the mutation settles.
+11. **Request briefing** ACKs via `vesselIntelligenceRequest`, then streams partial `SessionUpdateIntelligence` payloads (`complete: false`)
+    until the final brief (`complete: true`). One shimmer status in the Intelligence stage (no header/button spinners). Toast on start
+    failure / timeout; Gemini failures may still publish a stub brief.
 12. When the demo stream is on, the first high/critical anomaly auto-selects Galaxy Leader (`538090574`) once and focuses the chart — only
     when Demo is on, no Case is open, no briefing is in flight, and Galaxy Leader is present on the board.
 13. When the demo scenario reaches the end, it loops so the board stays live.
 
 ## Options considered
 
-| Option                                     | Pros                               | Cons                                                              |
-| ------------------------------------------ | ---------------------------------- | ----------------------------------------------------------------- |
-| Auto-live on watch resolve (chosen)        | Always-on live feed                | Query has a mild side effect (ensures tick driver)                |
-| Mock off by default + Demo toggle (chosen) | Live map uncluttered; opt-in demo  | Judges must click Demo once                                       |
-| Mock on by default                         | Instant narrative                  | Hides live contacts among demo clutter                            |
-| Reset mutation (chosen)                    | Judges can replay session state    | Minimal chrome                                                    |
-| `useSubscription`                          | Less code                          | Duplicate events under concurrent React — rejected (same as chat) |
-| Marketing card layout                      | Familiar                           | Wrong density for an ops console                                  |
-| Navy/cyan full-dark chrome                 | Ops-console cliché                 | Breaks the light-only brand in [`theme.md`](../styles/theme.md)   |
-| Light brand chrome + dark chart            | Chart contrast                     | Chart is a dark island inside light chrome                        |
-| Stock Positron (no tint)                   | Free light basemap                 | Washed-out white land; feels unfinished next to cream chrome      |
-| Warm-tinted Positron chart (chosen)        | Bronze land / muted sea; one brand | Runtime paint overrides tied to Positron layer ids                |
-| Always-expanded section dump               | Everything visible                 | Noisy; no progressive disclosure — replaced by Queue ↔ Case       |
-| Queue ↔ Case + one evidence panel (chosen) | Clear triage then investigate      | Deep evidence requires an explicit panel switch                   |
-| Sidebar-driven chart focus (chosen)        | Answers “where is this?” once      | Must not fight manual pans / map clicks                           |
-| Pan on every selection incl. map click     | Consistent camera                  | Yanks when the vessel is already under the cursor                 |
-| Continuous vessel tracking                 | Always framed                      | Steals operator agency during live AIS                            |
-| Auto-focus when Red opens                  | Demo drama                         | Steals focus mid-triage                                           |
-| Viewport AIS union + 5° hard skip (chosen) | Live ships follow the chart        | Shared feed; zoomed-out maps stay on env bbox only                |
-| Planet-wide AISStream box                  | “See everything”                   | Overwhelm + sparse free coverage                                  |
+| Option                                     | Pros                                                | Cons                                                              |
+| ------------------------------------------ | --------------------------------------------------- | ----------------------------------------------------------------- |
+| Auto-live on watch resolve (chosen)        | Always-on live feed                                 | Query has a mild side effect (ensures tick driver)                |
+| Mock off by default + Demo toggle (chosen) | Live map uncluttered; opt-in demo                   | Judges must click Demo once                                       |
+| Mock on by default                         | Instant narrative                                   | Hides live contacts among demo clutter                            |
+| Reset mutation (chosen)                    | Judges can replay session state                     | Minimal chrome                                                    |
+| `useSubscription`                          | Less code                                           | Duplicate events under concurrent React — rejected (same as chat) |
+| Marketing card layout                      | Familiar                                            | Wrong density for an ops console                                  |
+| Navy/cyan full-dark chrome                 | Ops-console cliché                                  | Breaks the light-only brand in [`theme.md`](../styles/theme.md)   |
+| Light brand chrome + dark chart            | Chart contrast                                      | Chart is a dark island inside light chrome                        |
+| Stock Positron (no tint)                   | Free light basemap                                  | Washed-out white land; feels unfinished next to cream chrome      |
+| Warm-tinted Positron chart (chosen)        | Bronze land / muted sea; one brand                  | Runtime paint overrides tied to Positron layer ids                |
+| Always-expanded section dump               | Everything visible                                  | Noisy; no progressive disclosure — replaced by Queue ↔ Case       |
+| Queue ↔ Case + Intelligence stage (chosen) | AI brief is the Case hero; evidence stays secondary | Timeline / Anomalies require a tab switch below the brief         |
+| Queue ↔ Case + Brief as peer tab           | Symmetric evidence panels                           | Buried the core AI feature under Timeline / Anomalies             |
+| Sidebar-driven chart focus (chosen)        | Answers “where is this?” once                       | Must not fight manual pans / map clicks                           |
+| Pan on every selection incl. map click     | Consistent camera                                   | Yanks when the vessel is already under the cursor                 |
+| Continuous vessel tracking                 | Always framed                                       | Steals operator agency during live AIS                            |
+| Auto-focus when Red opens                  | Demo drama                                          | Steals focus mid-triage                                           |
+| Viewport AIS union + 5° hard skip (chosen) | Live ships follow the chart                         | Shared feed; zoomed-out maps stay on env bbox only                |
+| Planet-wide AISStream box                  | “See everything”                                    | Overwhelm + sparse free coverage                                  |
 
 ## Option chosen
 
 Always-live fused board (optional AISStream + opt-in Galaxy Leader mock) via `scenarioEnsureLive` on `Session.watch` + imperative
 `executeSubscription` + light brand chrome (toolbar / sidebar / shell) with Queue ↔ Case attention rail. Chart basemap is Carto Positron
 with `navalChartTintApply` (bronze land `#c4a882`, muted sea `#8fa3ab`). Client-only MapLibre mount so SSR does not load GL. Mock feeder
-defaults off; toolbar **Demo** calls `mockAisSetEnabled` with optimistic UI (immediate pressed state; client hides mock overlays on disable
-before the mutation settles; server returns the new `WatchState` before fan-out NOTIFY). Mock loops on completion; `scenarioReset` clears
-fused board session state. Chart focus is sidebar-driven (`navalMapFocus.ts`): Queue / auto-select / Locate ease the camera; map clicks do
-not; live ticks never chase. Disabling Demo restores overview only when Case was on a mock contact. Debounced `aisViewportReport` unions
-each session’s ≤5° viewport into the shared AISStream subscription alongside `AISSTREAM_BBOX`.
+defaults off; toolbar **Demo** calls `mockAisSetEnabled` with optimistic UI (immediate pressed state; client hides mock overlays whenever
+Demo is off — not only while the mutation is in flight — so late feeder ticks cannot flicker demo content back; server returns the new
+`WatchState` before fan-out NOTIFY). The mock feeder uses a run-generation guard so in-flight async ticks abort after stop. Mock loops on
+completion; `scenarioReset` clears fused board session state. Chart focus is sidebar-driven (`navalMapFocus.ts`): Queue / auto-select /
+Locate ease the camera; map clicks do not; live ticks never chase. Disabling Demo restores overview only when Case was on a mock contact.
+Debounced `aisViewportReport` unions each session’s ≤5° viewport into the shared AISStream subscription alongside `AISSTREAM_BBOX`.
 
 Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory player + risk engine:
 [`maritime-watch.md`](../architecture/maritime-watch.md).
@@ -101,7 +105,9 @@ Basemap: Carto Positron (`basemaps.cartocdn.com/gl/positron-gl-style`) + warm ch
 asset geometries © OpenStreetMap contributors (ODbL); approximate public mapping, not operator as-built plans.
 
 Risk bands: Green 0–29, Yellow 30–59, Orange 60–79, Red 80–100. Red opens an in-memory `Incident`; `alertAcknowledge` clears the active
-alert. Mutations: `vesselSelect`, `vesselIntelligenceRequest`, `alertAcknowledge`, `scenarioReset`.
+alert. Mutations: `vesselSelect`, `vesselIntelligenceRequest`, `alertAcknowledge`, `scenarioReset`. Vessel intelligence streams via
+`streamText` + `Output.object` (`partialOutputStream`); the store holds the latest partial with `complete: false` until the final put.
+Citations render the human `label` in the rail; raw `source` ids stay on the row `title`.
 
 Chart gotchas (MapLibre v6 + Vite):
 

@@ -668,6 +668,8 @@ export type GqlSVesselDataSource = 'aisstream' | 'mock';
 export interface GqlSVesselIntelligence {
     __typename?: 'VesselIntelligence';
     citations: Array<GqlSVesselIntelligenceCitation>;
+    /** False while structured fields are still streaming in; true when the brief is final. */
+    complete: Scalars['Boolean']['output'];
     generatedAt: Scalars['DateTime']['output'];
     mmsi: Scalars['ID']['output'];
     playbookSteps: Array<Scalars['String']['output']>;
@@ -1870,6 +1872,7 @@ export type GqlSVesselIntelligenceResolvers<
     ParentType extends GqlSResolversParentTypes['VesselIntelligence'] = GqlSResolversParentTypes['VesselIntelligence'],
 > = ResolversObject<{
     citations?: Resolver<Array<GqlSResolversTypes['VesselIntelligenceCitation']>, ParentType, ContextType>;
+    complete?: Resolver<GqlSResolversTypes['Boolean'], ParentType, ContextType>;
     generatedAt?: Resolver<GqlSResolversTypes['DateTime'], ParentType, ContextType>;
     mmsi?: Resolver<GqlSResolversTypes['ID'], ParentType, ContextType>;
     playbookSteps?: Resolver<Array<GqlSResolversTypes['String']>, ParentType, ContextType>;

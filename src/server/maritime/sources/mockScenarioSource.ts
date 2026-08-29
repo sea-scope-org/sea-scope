@@ -12,6 +12,8 @@ let timer: ReturnType<typeof setInterval> | null = null;
 let simMs = 0;
 let status: 'running' | 'idle' | 'disabled' = 'disabled';
 let boundRuntime: ServerRuntime | null = null;
+/** Bumped on every start/stop so in-flight async ticks cannot resurrect mock vessels after Demo is turned off. */
+let runGeneration = 0;
 
 export function mockScenarioSourceStatus(): 'running' | 'idle' | 'disabled' {
     return status;
@@ -32,8 +34,13 @@ function stopTimer(): void {
     }
 }
 
+function mockFeederStillCurrent(generation: number): boolean {
+    return generation === runGeneration && status === 'running';
+}
+
 /** Stop the mock feeder and remove mock vessels from the track store. */
 function mockScenarioSourceStop(): number {
+    runGeneration += 1;
     stopTimer();
     const removed = vesselTrackStoreRemoveBySource('mock');
     status = 'disabled';
@@ -53,6 +60,8 @@ function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
         return;
     }
 
+    runGeneration += 1;
+    const generation = runGeneration;
     boundRuntime = serverRuntime;
     status = 'running';
     simMs = 0;
@@ -81,8 +90,10 @@ function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
 
     timer = setInterval(() => {
         void (async () => {
+            if (!mockFeederStillCurrent(generation)) return;
+
             const runtime = boundRuntime;
-            if (!runtime || status !== 'running') return;
+            if (!runtime) return;
 
             const nextSimMs = simMs + scenario.tickIntervalMs;
             if (nextSimMs > scenario.endSimMs) {
@@ -93,6 +104,8 @@ function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
             }
 
             for (const vessel of scenario.vessels) {
+                if (!mockFeederStillCurrent(generation)) return;
+
                 const position = scenarioPositionSample(scenario, vessel.mmsi, simMs);
                 if (!position) continue;
                 const tracked = upsertMock(vessel, position);
@@ -106,6 +119,10 @@ function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
                     position: tracked.position,
                     persistHistory,
                 });
+
+                // Persist yields — Demo may have been disabled while we awaited.
+                if (!mockFeederStillCurrent(generation)) return;
+
                 if (ok && persistHistory) {
                     vesselTrackStoreMarkPersisted(tracked.identity.mmsi, now);
                 }
@@ -117,9 +134,13 @@ function mockScenarioSourceStart(serverRuntime: ServerRuntime): void {
 /**
  * Boot hook — mock stays off unless `AIS_MOCK_ENABLED=true` (operators can still
  * toggle via `mockAisSetEnabled` at runtime).
+ *
+ * Do not clobber a feeder that was enabled at runtime if this re-enters after
+ * HMR / soft restart while `AIS_MOCK_ENABLED` remains false.
  */
 export function mockScenarioSourceEnsureStarted(serverRuntime: ServerRuntime): void {
     if (!environmentVariables.aisMockEnabled) {
+        if (status === 'running') return;
         status = 'disabled';
         console.info('[mock-ais] feeder off by default (enable from the watch toolbar or AIS_MOCK_ENABLED=true)');
         return;

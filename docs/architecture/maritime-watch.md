@@ -69,17 +69,17 @@ the browser console. Heartbeats every 15s report message/position counts.
 
 ## Key files
 
-| Piece            | Path                                                              |
-| ---------------- | ----------------------------------------------------------------- |
-| Track store      | `src/server/maritime/vesselTrackStore.ts`                         |
-| Theater mapping  | `src/server/maritime/aisTheater.ts` (`aisTheaterMapPoint`)        |
-| Viewport union   | `src/server/maritime/aisViewportRegistry.ts`                      |
-| Mock feeder      | `src/server/maritime/sources/mockScenarioSource.ts`               |
-| AISStream ingest | `src/server/maritime/aisStreamIngest.ts`                          |
-| Fused board      | `src/server/maritime/watchBoardRuntime.ts`                        |
-| Infrastructure   | `src/server/maritime/infrastructure/` (OSM GeoJSON catalog)       |
-| Tick driver      | `src/server/maritime/watchBoardTickDriver.ts`                     |
-| Persist          | `src/server/commands/aisVesselPositionPersist.ts`                 |
-| Control          | `src/server/commands/scenarioControl.ts`, `aisViewportReport.ts`  |
-| GraphQL          | `schema.graphqls` (`Vessel.dataSource`, `WatchState.dataSources`) |
-| DB               | `Vessels` / `AisPositions`                                        |
+| Piece            | Path                                                                               |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| Track store      | `src/server/maritime/vesselTrackStore.ts`                                          |
+| Theater mapping  | `src/server/maritime/aisTheater.ts` (`aisTheaterMapPoint`)                         |
+| Viewport union   | `src/server/maritime/aisViewportRegistry.ts`                                       |
+| Mock feeder      | `src/server/maritime/sources/mockScenarioSource.ts` (run-generation guard on stop) |
+| AISStream ingest | `src/server/maritime/aisStreamIngest.ts`                                           |
+| Fused board      | `src/server/maritime/watchBoardRuntime.ts`                                         |
+| Infrastructure   | `src/server/maritime/infrastructure/` (OSM GeoJSON catalog)                        |
+| Tick driver      | `src/server/maritime/watchBoardTickDriver.ts`                                      |
+| Persist          | `src/server/commands/aisVesselPositionPersist.ts`                                  |
+| Control          | `src/server/commands/scenarioControl.ts`, `aisViewportReport.ts`                   |
+| GraphQL          | `schema.graphqls` (`Vessel.dataSource`, `WatchState.dataSources`)                  |
+| DB               | `Vessels` / `AisPositions`                                                         |

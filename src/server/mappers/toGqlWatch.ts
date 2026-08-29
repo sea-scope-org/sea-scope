@@ -206,5 +206,6 @@ export function toGqlVesselIntelligence(intelligence: VesselIntelligence): GqlSV
         citations: intelligence.citations.map((c) => ({ label: c.label, source: c.source })),
         playbookSteps: intelligence.playbookSteps,
         generatedAt: new Date(intelligence.generatedAt),
+        complete: intelligence.complete,
     };
 }

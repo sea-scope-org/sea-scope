@@ -671,6 +671,8 @@ export type GqlCVesselDataSource = 'aisstream' | 'mock';
 export interface GqlCVesselIntelligence {
     __typename?: 'VesselIntelligence';
     citations: Array<GqlCVesselIntelligenceCitation>;
+    /** False while structured fields are still streaming in; true when the brief is final. */
+    complete: Scalars['Boolean']['output'];
     generatedAt: Scalars['DateTime']['output'];
     mmsi: Scalars['ID']['output'];
     playbookSteps: Array<Scalars['String']['output']>;
@@ -1788,6 +1790,7 @@ export type GqlCSessionUpdatesSubscription = {
                   whyFlagged: string;
                   playbookSteps: Array<string>;
                   generatedAt: string;
+                  complete: boolean;
                   citations: Array<{ label: string; source: string }>;
               };
           }
@@ -5739,6 +5742,7 @@ export const SessionUpdatesDocument = {
                                                         },
                                                         { kind: 'Field', name: { kind: 'Name', value: 'playbookSteps' } },
                                                         { kind: 'Field', name: { kind: 'Name', value: 'generatedAt' } },
+                                                        { kind: 'Field', name: { kind: 'Name', value: 'complete' } },
                                                     ],
                                                 },
                                             },

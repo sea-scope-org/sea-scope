@@ -587,6 +587,10 @@ type VesselIntelligence {
     citations: [VesselIntelligenceCitation!]!
     playbookSteps: [String!]!
     generatedAt: DateTime!
+    """
+    False while structured fields are still streaming in; true when the brief is final.
+    """
+    complete: Boolean!
 }
 
 type SessionUpdateWatchSnapshot {
