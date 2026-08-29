@@ -11,9 +11,11 @@ export interface WatchQueueProps {
     onSelectVessel: (mmsi: string) => void;
     /** When set, only these ship types appear in the queue. */
     visibleShipTypes?: ReadonlySet<string>;
+    /** Blocks queue picks while Case ↔ Queue selection is settling. */
+    disabled?: boolean;
 }
 
-export function WatchQueue({ watch, onSelectVessel, visibleShipTypes }: WatchQueueProps) {
+export function WatchQueue({ watch, onSelectVessel, visibleShipTypes, disabled = false }: WatchQueueProps) {
     const [osintOpen, setOsintOpen] = useState(false);
     const assetsById = new Map(watch.protectedAssets.map((a) => [a.assetId, a]));
     const openAlertVessels = new Set(watch.incidents.filter((i) => i.status === 'open').map((i) => i.mmsi));
@@ -43,6 +45,7 @@ export function WatchQueue({ watch, onSelectVessel, visibleShipTypes }: WatchQue
                                 vessel={vessel}
                                 asset={assetName(vessel, assetsById)}
                                 hasOpenAlert={openAlertVessels.has(vessel.mmsi)}
+                                disabled={disabled}
                                 onSelect={() => onSelectVessel(vessel.mmsi)}
                             />
                         ))}
@@ -93,11 +96,13 @@ function QueueRow({
     vessel,
     asset,
     hasOpenAlert,
+    disabled,
     onSelect,
 }: {
     vessel: Vessel;
     asset: string | null;
     hasOpenAlert: boolean;
+    disabled: boolean;
     onSelect: () => void;
 }) {
     const primaryReason = [...vessel.activeFactors].reverse()[0]?.explanation ?? null;
@@ -107,10 +112,11 @@ function QueueRow({
             <button
                 type="button"
                 onClick={onSelect}
+                disabled={disabled}
                 className={cn(
                     'w-full border-l-2 border-y border-r border-border bg-background px-2.5 py-2 text-left transition-colors outline-none',
                     'rounded-md hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
-                    'active:bg-muted',
+                    'active:bg-muted disabled:pointer-events-none disabled:opacity-50',
                     riskAccentClass(vessel.riskLevel),
                 )}
             >

@@ -71,9 +71,17 @@ function WatchPage() {
     const [, aisViewportClear] = useMutation(AisViewportClearDocument);
 
     const [intelligenceBusy, setIntelligenceBusy] = useState(false);
+    const [mockToggleBusy, setMockToggleBusy] = useState(false);
+    /** Optimistic Demo pressed state while the mutation is in flight. */
+    const [mockEnabledOverride, setMockEnabledOverride] = useState<boolean | null>(null);
+    /** Optimistic Case selection (`undefined` = use server). */
+    const [selectedMmsiOverride, setSelectedMmsiOverride] = useState<string | null | undefined>(undefined);
+    const [selectionBusy, setSelectionBusy] = useState(false);
     const [focusRequest, setFocusRequest] = useState<NavalMapFocusRequest | null>(null);
     const focusGenerationRef = useRef(0);
     const autoSelectedRef = useRef(false);
+    const mockToggleGenerationRef = useRef(0);
+    const selectionGenerationRef = useRef(0);
     const viewportReportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const aisViewportReportRef = useRef(aisViewportReport);
     aisViewportReportRef.current = aisViewportReport;
@@ -117,8 +125,61 @@ function WatchPage() {
     applyWatchRef.current = applyWatch;
 
     const liveWatch = watch ?? seedWatch;
+    const serverMockEnabled = liveWatch.dataSources.find((source) => source.id === 'mock')?.enabled ?? false;
+    const mockEnabled = mockEnabledOverride ?? serverMockEnabled;
 
-    const shipTypeCatalog = useMemo(() => watchShipTypesFromVessels(liveWatch.vessels), [liveWatch.vessels]);
+    // While Demo is toggling, keep the chrome honest immediately: button + badges flip
+    // now; on disable, drop mock contacts / theater overlays before the mutation returns.
+    // selectedMmsiOverride does the same for Case ↔ Queue so Back to queue is instant.
+    const displayWatch = useMemo((): GqlCWatchFieldsFragment => {
+        let next: GqlCWatchFieldsFragment = liveWatch;
+
+        if (mockEnabledOverride !== null) {
+            const dataSources = liveWatch.dataSources.map((source) =>
+                source.id === 'mock'
+                    ? {
+                          ...source,
+                          enabled: mockEnabledOverride,
+                          status: mockEnabledOverride ? 'running' : 'disabled',
+                          vesselCount: mockEnabledOverride ? source.vesselCount : 0,
+                      }
+                    : source,
+            );
+
+            if (mockEnabledOverride) {
+                next = {
+                    ...liveWatch,
+                    title: 'SeaScope watch — live + demo',
+                    dataSources,
+                };
+            } else {
+                const selectedWasMock =
+                    liveWatch.selectedMmsi != null &&
+                    liveWatch.vessels.some((v) => v.mmsi === liveWatch.selectedMmsi && v.dataSource === 'mock');
+
+                next = {
+                    ...liveWatch,
+                    title: 'SeaScope watch — live',
+                    highRiskZones: [],
+                    osintAlerts: [],
+                    anomalies: [],
+                    riskEvents: [],
+                    incidents: [],
+                    vessels: liveWatch.vessels.filter((vessel) => vessel.dataSource !== 'mock'),
+                    dataSources,
+                    selectedMmsi: selectedWasMock ? null : liveWatch.selectedMmsi,
+                };
+            }
+        }
+
+        if (selectedMmsiOverride !== undefined) {
+            next = { ...next, selectedMmsi: selectedMmsiOverride };
+        }
+
+        return next;
+    }, [liveWatch, mockEnabledOverride, selectedMmsiOverride]);
+
+    const shipTypeCatalog = useMemo(() => watchShipTypesFromVessels(displayWatch.vessels), [displayWatch.vessels]);
     const shipTypeCatalogKey = shipTypeCatalog.join('\0');
     const previousCatalogRef = useRef<string[]>(shipTypeCatalog);
     const [filters, setFilters] = useState<WatchFiltersState>(() => watchFiltersCreate(shipTypeCatalog));
@@ -131,61 +192,91 @@ function WatchPage() {
     }, [shipTypeCatalogKey]);
 
     const countedVessels = useMemo(
-        () => liveWatch.vessels.filter((v) => vesselPassesQueueShipTypeFilter(v, filters)),
-        [filters, liveWatch.vessels],
+        () => displayWatch.vessels.filter((v) => vesselPassesQueueShipTypeFilter(v, filters)),
+        [displayWatch.vessels, filters],
     );
 
     const mapVessels = useMemo(
-        () => liveWatch.vessels.filter((v) => vesselPassesShipTypeFilter(v, filters, liveWatch.selectedMmsi)),
-        [filters, liveWatch.selectedMmsi, liveWatch.vessels],
+        () => displayWatch.vessels.filter((v) => vesselPassesShipTypeFilter(v, filters, displayWatch.selectedMmsi)),
+        [displayWatch.selectedMmsi, displayWatch.vessels, filters],
     );
 
     const selectVessel = useCallback(
         async (mmsi: string, options: { focus: boolean }) => {
+            const generation = ++selectionGenerationRef.current;
+            setSelectedMmsiOverride(mmsi);
+            setSelectionBusy(true);
             clearIntelligence();
             setIntelligenceBusy(false);
-            const result = await vesselSelect({ mmsi });
-            const next = result.data?.session.vesselSelect;
-            if (next) {
-                applyWatch(next);
-                if (options.focus) {
-                    requestChartFocus(mmsi, vesselHasOpenIncident(next, mmsi));
-                }
+            if (options.focus) {
+                requestChartFocus(mmsi, vesselHasOpenIncident(liveWatch, mmsi));
             }
+
+            const result = await vesselSelect({ mmsi });
+            if (generation !== selectionGenerationRef.current) return;
+
+            const next = result.data?.session.vesselSelect;
+            if (!next) {
+                setSelectedMmsiOverride(undefined);
+                setSelectionBusy(false);
+                toast.error('Could not open case.');
+                return;
+            }
+
+            applyWatch(next);
+            setSelectedMmsiOverride(undefined);
+            setSelectionBusy(false);
         },
-        [applyWatch, clearIntelligence, requestChartFocus, vesselSelect],
+        [applyWatch, clearIntelligence, liveWatch, requestChartFocus, vesselSelect],
     );
 
     const onSelectFromQueue = useCallback(
         (mmsi: string) => {
+            if (selectionBusy) return;
             void selectVessel(mmsi, { focus: true });
         },
-        [selectVessel],
+        [selectVessel, selectionBusy],
     );
 
     const onSelectFromMap = useCallback(
         (mmsi: string) => {
+            if (selectionBusy) return;
             void selectVessel(mmsi, { focus: false });
         },
-        [selectVessel],
+        [selectVessel, selectionBusy],
     );
 
     const onLocateOnChart = useCallback(() => {
-        const mmsi = liveWatch.selectedMmsi;
+        const mmsi = displayWatch.selectedMmsi;
         if (!mmsi) return;
-        requestChartFocus(mmsi, vesselHasOpenIncident(liveWatch, mmsi));
-    }, [liveWatch, requestChartFocus]);
+        requestChartFocus(mmsi, vesselHasOpenIncident(displayWatch, mmsi));
+    }, [displayWatch, requestChartFocus]);
 
     const onClearSelection = useCallback(async () => {
+        if (selectionBusy) return;
+
+        const generation = ++selectionGenerationRef.current;
+        setSelectedMmsiOverride(null);
+        setSelectionBusy(true);
         clearIntelligence();
         setIntelligenceBusy(false);
+        requestChartFocus(null, false);
+
         const result = await vesselSelect({ mmsi: null });
+        if (generation !== selectionGenerationRef.current) return;
+
         const next = result.data?.session.vesselSelect;
-        if (next) {
-            applyWatch(next);
-            requestChartFocus(null, false);
+        if (!next) {
+            setSelectedMmsiOverride(undefined);
+            setSelectionBusy(false);
+            toast.error('Could not return to queue.');
+            return;
         }
-    }, [applyWatch, clearIntelligence, requestChartFocus, vesselSelect]);
+
+        applyWatch(next);
+        setSelectedMmsiOverride(undefined);
+        setSelectionBusy(false);
+    }, [applyWatch, clearIntelligence, requestChartFocus, selectionBusy, vesselSelect]);
 
     const onAcknowledgeAlert = useCallback(
         async (incidentId: string) => {
@@ -200,6 +291,9 @@ function WatchPage() {
         clearIntelligence();
         setIntelligenceBusy(false);
         autoSelectedRef.current = false;
+        selectionGenerationRef.current += 1;
+        setSelectedMmsiOverride(undefined);
+        setSelectionBusy(false);
         const result = await scenarioReset({});
         const next = result.data?.session.scenarioReset;
         if (next) {
@@ -210,23 +304,46 @@ function WatchPage() {
 
     const onMockAisToggle = useCallback(
         async (enabled: boolean) => {
+            if (mockToggleBusy) return;
+
+            const generation = ++mockToggleGenerationRef.current;
+            const selectedWasMock =
+                liveWatch.selectedMmsi != null &&
+                liveWatch.vessels.some((v) => v.mmsi === liveWatch.selectedMmsi && v.dataSource === 'mock');
+
+            setMockToggleBusy(true);
+            setMockEnabledOverride(enabled);
+
             if (!enabled) {
                 clearIntelligence();
                 setIntelligenceBusy(false);
                 autoSelectedRef.current = false;
+                // Only restore overview when Case was on a demo contact — live triage
+                // should not get yanked by toggling Demo off.
+                if (selectedWasMock) {
+                    selectionGenerationRef.current += 1;
+                    setSelectedMmsiOverride(null);
+                    setSelectionBusy(false);
+                    requestChartFocus(null, false);
+                }
             }
+
             const result = await mockAisSetEnabled({ enabled });
+            if (generation !== mockToggleGenerationRef.current) return;
+
             const next = result.data?.session.mockAisSetEnabled;
             if (result.error || !next) {
+                setMockEnabledOverride(null);
+                setMockToggleBusy(false);
                 toast.error(enabled ? 'Could not enable demo stream.' : 'Could not disable demo stream.');
                 return;
             }
+
             applyWatch(next);
-            if (!enabled) {
-                requestChartFocus(null, false);
-            }
+            setMockEnabledOverride(null);
+            setMockToggleBusy(false);
         },
-        [applyWatch, clearIntelligence, mockAisSetEnabled, requestChartFocus],
+        [applyWatch, clearIntelligence, liveWatch.selectedMmsi, liveWatch.vessels, mockAisSetEnabled, mockToggleBusy, requestChartFocus],
     );
 
     const onViewportChange = useCallback((bounds: { southLat: number; westLon: number; northLat: number; eastLon: number }) => {
@@ -265,10 +382,10 @@ function WatchPage() {
 
     useEffect(() => {
         if (!intelligenceBusy || !intelligence) return;
-        if (intelligence.mmsi === liveWatch.selectedMmsi) {
+        if (intelligence.mmsi === displayWatch.selectedMmsi) {
             setIntelligenceBusy(false);
         }
-    }, [intelligence, intelligenceBusy, liveWatch.selectedMmsi]);
+    }, [displayWatch.selectedMmsi, intelligence, intelligenceBusy]);
 
     useEffect(() => {
         if (!intelligenceBusy) return;
@@ -279,34 +396,36 @@ function WatchPage() {
         return () => window.clearTimeout(timer);
     }, [intelligenceBusy]);
 
-    const centerLat = liveWatch.centerLat;
-    const centerLon = liveWatch.centerLon;
-    const zoom = liveWatch.zoom;
+    const centerLat = displayWatch.centerLat;
+    const centerLon = displayWatch.centerLon;
+    const zoom = displayWatch.zoom;
 
     return (
         <div className="h-dvh overflow-hidden bg-background text-foreground">
             <SidebarProvider className="h-full min-h-0!" style={WATCH_SIDEBAR_STYLE}>
                 <SidebarInset id="main-content" className="min-h-0 overflow-hidden bg-background">
                     <WatchToolbar
-                        watch={liveWatch}
+                        watch={displayWatch}
                         countedVessels={countedVessels}
                         filters={filters}
                         shipTypeCatalog={shipTypeCatalog}
                         onFiltersChange={setFilters}
                         onReset={onReset}
+                        mockEnabled={mockEnabled}
+                        mockBusy={mockToggleBusy}
                         onMockAisToggle={onMockAisToggle}
                     />
                     <div className="relative min-h-0 min-w-0 flex-1">
                         <NavalMap
-                            key={liveWatch.scenarioId}
+                            key={displayWatch.scenarioId}
                             centerLat={centerLat}
                             centerLon={centerLon}
                             zoom={zoom}
                             vessels={mapVessels}
-                            highRiskZones={liveWatch.highRiskZones}
-                            protectedAssets={liveWatch.protectedAssets}
+                            highRiskZones={displayWatch.highRiskZones}
+                            protectedAssets={displayWatch.protectedAssets}
                             layers={filters.layers}
-                            selectedMmsi={liveWatch.selectedMmsi}
+                            selectedMmsi={displayWatch.selectedMmsi}
                             focusRequest={focusRequest}
                             onSelect={onSelectFromMap}
                             onViewportChange={onViewportChange}
@@ -315,9 +434,10 @@ function WatchPage() {
                 </SidebarInset>
 
                 <IntelligenceSidebar
-                    watch={liveWatch}
+                    watch={displayWatch}
                     intelligence={intelligence}
                     intelligenceBusy={intelligenceBusy}
+                    selectionBusy={selectionBusy}
                     onRequestIntelligence={onRequestIntelligence}
                     onSelectVessel={onSelectFromQueue}
                     onLocateOnChart={onLocateOnChart}

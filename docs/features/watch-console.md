@@ -9,10 +9,11 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
    Positron retinted to warm bronze land and muted sea (see [`theme.md`](../styles/theme.md)).
 3. The fused watch board is live on load with **live AISStream** positions when `AISSTREAM_API_KEY` is set (always the configured
    `AISSTREAM_BBOX`, plus any connected operators’ chart viewports under 5° via `aisViewportReport`). The **Galaxy Leader demo** stream is
-   **off by default** — enable it with the toolbar **Demo** button (`mockAisSetEnabled`). Real undersea cables and pipelines (OpenStreetMap,
-   true WGS84) stay on the chart either way. While Demo is off, high-risk zones, simulated radar, and theater OSINT are hidden so live
-   traffic is not scored against demo-only geometry. Toolbar badges show live (and demo, when on) vessel counts. **Reset** clears selection
-   / risk stickies for the session.
+   **off by default** — enable it with the toolbar **Demo** button (`mockAisSetEnabled`). The button flips immediately (optimistic pressed
+   state + in-flight lock); turning Demo off also hides mock contacts and theater overlays at once, and only restores chart overview when
+   Case was on a demo contact. Real undersea cables and pipelines (OpenStreetMap, true WGS84) stay on the chart either way. While Demo is
+   off, high-risk zones, simulated radar, and theater OSINT are hidden so live traffic is not scored against demo-only geometry. Toolbar
+   badges show live (and demo, when on) vessel counts. **Reset** clears selection / risk stickies for the session.
 4. Toolbar **Filters** toggles chart layers (protected assets, high-risk zones, track tails, radar contacts) and vessel `shipType`s. Filters
    are client-only and shared by the chart, Queue, and toolbar band counts (all on by default; **Show all** resets). A vessel already in
    **Case** stays on the map if its type is unchecked; Queue still hides unchecked types.
@@ -32,7 +33,8 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
    filters. Theater OSINT is a collapsed disclosure at the bottom. Band counts live in the toolbar, not the rail.
 10. Sidebar **Case** (vessel selected): sticky identity + Why now (top factors) + Acknowledge / Locate on chart / Request briefing; evidence
     is one panel at a time (Timeline | Anomalies | Brief). Timeline merges risk-score changes and incident events. OSINT is not shown in
-    Case.
+    Case. **Back to queue** clears selection optimistically (Queue appears immediately; chart overview restores without waiting on
+    `vesselSelect`) and locks queue picks until the mutation settles.
 11. **Request briefing** ACKs via `vesselIntelligenceRequest` then shows progress until `SessionUpdateIntelligence` (toast on start failure
     / timeout; Gemini failures may still publish a stub brief).
 12. When the demo stream is on, the first high/critical anomaly auto-selects Galaxy Leader (`538090574`) once and focuses the chart.
@@ -66,9 +68,11 @@ Operator console for the SeaScope demo — live maritime chart, scored risk feed
 Always-live fused board (optional AISStream + opt-in Galaxy Leader mock) via `scenarioEnsureLive` on `Session.watch` + imperative
 `executeSubscription` + light brand chrome (toolbar / sidebar / shell) with Queue ↔ Case attention rail. Chart basemap is Carto Positron
 with `navalChartTintApply` (bronze land `#c4a882`, muted sea `#8fa3ab`). Client-only MapLibre mount so SSR does not load GL. Mock feeder
-defaults off; toolbar **Demo** calls `mockAisSetEnabled`. Mock loops on completion; `scenarioReset` clears fused board session state. Chart
-focus is sidebar-driven (`navalMapFocus.ts`): Queue / auto-select / Locate ease the camera; map clicks do not; live ticks never chase.
-Debounced `aisViewportReport` unions each session’s ≤5° viewport into the shared AISStream subscription alongside `AISSTREAM_BBOX`.
+defaults off; toolbar **Demo** calls `mockAisSetEnabled` with optimistic UI (immediate pressed state; client hides mock overlays on disable
+before the mutation settles; server returns the new `WatchState` before fan-out NOTIFY). Mock loops on completion; `scenarioReset` clears
+fused board session state. Chart focus is sidebar-driven (`navalMapFocus.ts`): Queue / auto-select / Locate ease the camera; map clicks do
+not; live ticks never chase. Disabling Demo restores overview only when Case was on a mock contact. Debounced `aisViewportReport` unions
+each session’s ≤5° viewport into the shared AISStream subscription alongside `AISSTREAM_BBOX`.
 
 Product framing and risk principles: [`seascope.md`](./seascope.md). In-memory player + risk engine:
 [`maritime-watch.md`](../architecture/maritime-watch.md).

@@ -51,11 +51,12 @@ export async function vesselSelect(
     try {
         scenarioEnsureLive(parent.sessionId, serverRuntime);
         watchBoardSessionSelectVessel(parent.sessionId, args.mmsi);
-        await serverRuntime.publish.sessionUpdates({
+        const next = watchStateForSession(parent.sessionId);
+        void serverRuntime.publish.sessionUpdates({
             sessionId: parent.sessionId,
             payload: { kind: 'watchSnapshot' },
         });
-        return watchStateForSession(parent.sessionId);
+        return next;
     } catch (error) {
         serverRuntime.log.error(error, requestingSession);
         return null;
@@ -148,13 +149,19 @@ export async function mockAisSetEnabled(
             }
         }
 
-        for (const sessionId of watchBoardSessionList()) {
-            await serverRuntime.publish.sessionUpdates({
-                sessionId,
-                payload: { kind: 'watchSnapshot' },
-            });
-        }
-        return watchStateForSession(parent.sessionId);
+        // Build the response first so the toggle mutation is not blocked on
+        // fan-out NOTIFY. Peer sessions still get a snapshot; the caller applies
+        // the returned WatchState immediately.
+        const next = watchStateForSession(parent.sessionId);
+        void Promise.all(
+            watchBoardSessionList().map((sessionId) =>
+                serverRuntime.publish.sessionUpdates({
+                    sessionId,
+                    payload: { kind: 'watchSnapshot' },
+                }),
+            ),
+        );
+        return next;
     } catch (error) {
         serverRuntime.log.error(error, requestingSession);
         return null;

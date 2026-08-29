@@ -18,6 +18,9 @@ export interface WatchToolbarProps {
     shipTypeCatalog: ReadonlyArray<string>;
     onFiltersChange: (next: WatchFiltersState) => void;
     onReset?: () => void;
+    /** Optimistic Demo pressed state — parent owns in-flight overrides. */
+    mockEnabled?: boolean;
+    mockBusy?: boolean;
     onMockAisToggle?: (enabled: boolean) => void;
     className?: string;
 }
@@ -31,13 +34,15 @@ export function WatchToolbar({
     shipTypeCatalog,
     onFiltersChange,
     onReset,
+    mockEnabled: mockEnabledProp,
+    mockBusy = false,
     onMockAisToggle,
     className,
 }: WatchToolbarProps) {
     const openAlerts = watch.incidents.filter((i) => i.status === 'open').length;
     const alertLabel = openAlerts === 1 ? '1 alert' : `${openAlerts} alerts`;
     const mockSource = watch.dataSources.find((source) => source.id === 'mock');
-    const mockEnabled = mockSource?.enabled ?? false;
+    const mockEnabled = mockEnabledProp ?? mockSource?.enabled ?? false;
 
     const bandCounts: Record<RiskLevel, number> = { green: 0, yellow: 0, orange: 0, red: 0 };
     for (const vessel of countedVessels) {
@@ -123,8 +128,10 @@ export function WatchToolbar({
                         variant={mockEnabled ? 'secondary' : 'ghost'}
                         className="gap-1 tracking-wide uppercase"
                         onClick={() => onMockAisToggle(!mockEnabled)}
+                        disabled={mockBusy}
                         title={mockEnabled ? 'Disable Galaxy Leader demo stream' : 'Enable Galaxy Leader demo stream'}
                         aria-pressed={mockEnabled}
+                        aria-busy={mockBusy}
                     >
                         <SparklesIcon className="size-3.5" aria-hidden />
                         {mockEnabled ? 'Demo on' : 'Demo'}
