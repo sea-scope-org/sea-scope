@@ -44,10 +44,12 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
     const reason = vessel.activeFactors.at(-1)?.explanation;
     const trend = trendMeta(vessel.riskTrend);
     const aisStatus = vessel.aisDark ? 'AIS dark' : position ? freshnessLabel(position.timestamp, nowMs) : 'No AIS fix';
-    const projectedDistance = projection.at(-1)
-        ? `${(position!.sog * (projection.at(-1)!.minutes / 60)).toFixed(1)} nm`
-        : 'Idle';
-    const assetValue = assetName ? (vessel.nearestAssetDistanceNm != null ? `${vessel.nearestAssetDistanceNm.toFixed(2)} nm` : assetName) : 'None';
+    const projectedDistance = projection.at(-1) ? `${(position!.sog * (projection.at(-1)!.minutes / 60)).toFixed(1)} nm` : 'Idle';
+    const assetValue = assetName
+        ? vessel.nearestAssetDistanceNm != null
+            ? `${vessel.nearestAssetDistanceNm.toFixed(2)} nm`
+            : assetName
+        : 'None';
 
     return (
         <div
@@ -63,11 +65,18 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
                             </span>
                             <div className="min-w-0">
                                 <p className="truncate text-sm font-semibold">{vessel.name || 'Unknown vessel'}</p>
-                                <p className="truncate text-muted-foreground">{familyMeta.label} / {vessel.shipType || 'Unknown class'}</p>
+                                <p className="truncate text-muted-foreground">
+                                    {familyMeta.label} / {vessel.shipType || 'Unknown class'}
+                                </p>
                             </div>
                         </div>
                     </div>
-                    <div className={cn('flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 font-semibold', RISK_TONE[vessel.riskLevel])}>
+                    <div
+                        className={cn(
+                            'flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 font-semibold',
+                            RISK_TONE[vessel.riskLevel],
+                        )}
+                    >
                         <span className={cn('size-1.5 rounded-full', RISK_DOT[vessel.riskLevel])} aria-hidden />
                         <span>{vessel.riskScore}</span>
                         <trend.Icon className="size-3.5" aria-label={trend.label} />
@@ -77,7 +86,12 @@ export function VesselPreview({ vessel, nowMs, assetName }: { vessel: WatchVesse
 
             <div className="grid grid-cols-3 gap-px bg-border text-[10px]">
                 <PreviewTile Icon={HistoryIcon} label="Activity" value={aisStatus} />
-                <PreviewTile Icon={BellIcon} label="Alerts" value={`${vessel.activeFactors.length}`} tone={vessel.activeFactors.length ? 'alert' : 'quiet'} />
+                <PreviewTile
+                    Icon={BellIcon}
+                    label="Alerts"
+                    value={`${vessel.activeFactors.length}`}
+                    tone={vessel.activeFactors.length ? 'alert' : 'quiet'}
+                />
                 <PreviewTile Icon={RouteIcon} label="Projection" value={projectedDistance} />
             </div>
 
@@ -120,7 +134,17 @@ function trendMeta(trend: WatchVessel['riskTrend']): { Icon: PreviewIcon; label:
     return { Icon: ArrowRightIcon, label: 'Stable' };
 }
 
-function PreviewTile({ Icon, label, value, tone = 'quiet' }: { Icon: PreviewIcon; label: string; value: string; tone?: 'alert' | 'quiet' }) {
+function PreviewTile({
+    Icon,
+    label,
+    value,
+    tone = 'quiet',
+}: {
+    Icon: PreviewIcon;
+    label: string;
+    value: string;
+    tone?: 'alert' | 'quiet';
+}) {
     return (
         <div className="min-w-0 bg-card px-2.5 py-2">
             <div className="flex items-center gap-1.5 text-muted-foreground">
