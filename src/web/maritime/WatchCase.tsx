@@ -342,11 +342,11 @@ function IntelligenceBrief({ intelligence, streaming }: { intelligence: GqlCVess
     return (
         <div className="flex flex-col gap-3">
             {hasStatus || hasSummary ? (
-                <Alert className="border-primary/30 bg-primary/5 px-2.5 py-2">
+                <Alert className="min-w-0 overflow-hidden border-primary/30 bg-primary/5 px-2.5 py-2">
                     {hasStatus ? (
                         <Badge
                             variant="outline"
-                            className="col-span-full mb-1 rounded-sm border-primary/40 bg-transparent px-0 text-[10px] font-semibold tracking-wider text-primary uppercase"
+                            className="col-span-full mb-1 h-auto max-w-full min-w-0 justify-start rounded-sm border-primary/40 bg-transparent px-0 text-left text-[10px] font-semibold tracking-wider whitespace-normal text-primary uppercase"
                         >
                             {intelligence.status}
                         </Badge>
