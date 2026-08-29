@@ -304,8 +304,16 @@ export function NavalMapClient({
                         ? (protectedAssets.find((item) => item.assetId === vessel.nearestAssetId)?.name ?? null)
                         : null;
 
+                    const previewOpen = previewMmsi === vessel.mmsi;
+
                     return (
-                        <Marker key={vessel.mmsi} longitude={position.lon} latitude={position.lat} anchor="center">
+                        <Marker
+                            key={vessel.mmsi}
+                            longitude={position.lon}
+                            latitude={position.lat}
+                            anchor="center"
+                            style={{ zIndex: previewOpen ? 30 : selected ? 20 : 1 }}
+                        >
                             <div className="relative">
                                 <VesselMarker
                                     vessel={vessel}
@@ -318,7 +326,7 @@ export function NavalMapClient({
                                     onFocus={() => setPreviewMmsi(vessel.mmsi)}
                                     onBlur={previewClear}
                                 />
-                                {previewMmsi === vessel.mmsi ? <VesselPreview vessel={vessel} nowMs={nowMs} assetName={asset} /> : null}
+                                {previewOpen ? <VesselPreview vessel={vessel} nowMs={nowMs} assetName={asset} /> : null}
                             </div>
                         </Marker>
                     );

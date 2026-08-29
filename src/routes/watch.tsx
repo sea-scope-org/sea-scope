@@ -84,6 +84,8 @@ function WatchPage() {
     /** Sync lock — `mockToggleBusy` state alone can miss a double-click before re-render. */
     const mockToggleBusyRef = useRef(false);
     const selectionGenerationRef = useRef(0);
+    /** Sync lock — `selectionBusy` state alone can miss a click before re-render. */
+    const selectionBusyRef = useRef(false);
     const viewportReportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const aisViewportReportRef = useRef(aisViewportReport);
     aisViewportReportRef.current = aisViewportReport;
@@ -111,22 +113,40 @@ function WatchPage() {
         (anomaly: GqlCWatchFieldsFragment['anomalies'][number]) => {
             if (autoSelectedRef.current) return;
             if (anomaly.severity !== 'critical' && anomaly.severity !== 'high') return;
-            // Demo narrative only: never steal an open Case or interrupt a briefing,
-            // and never select Galaxy Leader when it is not on the board.
+            // Demo narrative only: never steal an open Case, interrupt a briefing / in-flight
+            // selection, or select Galaxy Leader when it is not on the board.
             if (!mockEnabledRef.current) return;
             if (selectedMmsiRef.current) return;
+            if (selectionBusyRef.current) return;
             if (intelligenceBusyRef.current) return;
             if (!vesselsRef.current.some((vessel) => vessel.mmsi === GALAXY_LEADER_MMSI)) return;
 
             autoSelectedRef.current = true;
+            // Participate in the Case ↔ Queue generation protocol so a late
+            // vesselSelect cannot yank the operator back to Galaxy Leader.
+            const generation = ++selectionGenerationRef.current;
+            setSelectedMmsiOverride(GALAXY_LEADER_MMSI);
+
             void (async () => {
                 const result = await vesselSelect({ mmsi: GALAXY_LEADER_MMSI });
+                if (generation !== selectionGenerationRef.current) {
+                    // Our mutation may have landed after the operator's — repair.
+                    const intended = selectedMmsiRef.current;
+                    if (intended !== GALAXY_LEADER_MMSI) {
+                        void vesselSelect({ mmsi: intended });
+                    }
+                    return;
+                }
+
                 const next = result.data?.session.vesselSelect;
                 if (!next?.vessels.some((vessel) => vessel.mmsi === GALAXY_LEADER_MMSI)) {
                     autoSelectedRef.current = false;
+                    setSelectedMmsiOverride(undefined);
                     return;
                 }
+
                 applyWatchRef.current(next);
+                setSelectedMmsiOverride(undefined);
                 requestChartFocusRef.current(GALAXY_LEADER_MMSI, vesselHasOpenIncident(next, GALAXY_LEADER_MMSI));
             })();
         },
@@ -223,6 +243,7 @@ function WatchPage() {
     const selectVessel = useCallback(
         async (mmsi: string, options: { focus: boolean }) => {
             const generation = ++selectionGenerationRef.current;
+            selectionBusyRef.current = true;
             setSelectedMmsiOverride(mmsi);
             setSelectionBusy(true);
             clearIntelligence();
@@ -236,6 +257,7 @@ function WatchPage() {
 
             const next = result.data?.session.vesselSelect;
             if (!next) {
+                selectionBusyRef.current = false;
                 setSelectedMmsiOverride(undefined);
                 setSelectionBusy(false);
                 toast.error('Could not open case.');
@@ -243,6 +265,7 @@ function WatchPage() {
             }
 
             applyWatch(next);
+            selectionBusyRef.current = false;
             setSelectedMmsiOverride(undefined);
             setSelectionBusy(false);
         },
@@ -251,18 +274,18 @@ function WatchPage() {
 
     const onSelectFromQueue = useCallback(
         (mmsi: string) => {
-            if (selectionBusy) return;
+            if (selectionBusyRef.current) return;
             void selectVessel(mmsi, { focus: true });
         },
-        [selectVessel, selectionBusy],
+        [selectVessel],
     );
 
     const onSelectFromMap = useCallback(
         (mmsi: string) => {
-            if (selectionBusy) return;
+            if (selectionBusyRef.current) return;
             void selectVessel(mmsi, { focus: false });
         },
-        [selectVessel, selectionBusy],
+        [selectVessel],
     );
 
     const onLocateOnChart = useCallback(() => {
@@ -272,9 +295,10 @@ function WatchPage() {
     }, [displayWatch, requestChartFocus]);
 
     const onClearSelection = useCallback(async () => {
-        if (selectionBusy) return;
+        if (selectionBusyRef.current) return;
 
         const generation = ++selectionGenerationRef.current;
+        selectionBusyRef.current = true;
         setSelectedMmsiOverride(null);
         setSelectionBusy(true);
         clearIntelligence();
@@ -286,6 +310,7 @@ function WatchPage() {
 
         const next = result.data?.session.vesselSelect;
         if (!next) {
+            selectionBusyRef.current = false;
             setSelectedMmsiOverride(undefined);
             setSelectionBusy(false);
             toast.error('Could not return to queue.');
@@ -293,9 +318,10 @@ function WatchPage() {
         }
 
         applyWatch(next);
+        selectionBusyRef.current = false;
         setSelectedMmsiOverride(undefined);
         setSelectionBusy(false);
-    }, [applyWatch, clearIntelligence, requestChartFocus, selectionBusy, vesselSelect]);
+    }, [applyWatch, clearIntelligence, requestChartFocus, vesselSelect]);
 
     const onAcknowledgeAlert = useCallback(
         async (incidentId: string) => {
@@ -311,6 +337,7 @@ function WatchPage() {
         setIntelligenceBusy(false);
         autoSelectedRef.current = false;
         selectionGenerationRef.current += 1;
+        selectionBusyRef.current = false;
         setSelectedMmsiOverride(undefined);
         setSelectionBusy(false);
         const result = await scenarioReset({});
@@ -342,6 +369,7 @@ function WatchPage() {
                 // should not get yanked by toggling Demo off.
                 if (selectedWasMock) {
                     selectionGenerationRef.current += 1;
+                    selectionBusyRef.current = false;
                     setSelectedMmsiOverride(null);
                     setSelectionBusy(false);
                     requestChartFocus(null, false);
