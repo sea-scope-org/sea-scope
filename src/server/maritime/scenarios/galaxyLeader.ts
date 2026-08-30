@@ -149,7 +149,7 @@ function buildSpeedDropTrack(): AisPosition[] {
 function buildZigZagTrack(): AisPosition[] {
     const dropMs = 24 * 60_000;
     const out: AisPosition[] = [];
-    let lat = 14.2;
+    let lat = 14.45;
     let lon = 42.7;
     const headings = [5, 95, 185, 275, 20, 140, 250, 40];
     let phase = 0;
