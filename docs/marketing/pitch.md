@@ -13,13 +13,13 @@ answers. SeaScope is the intelligence layer; the partner is the sensing layer; b
 
 **Visuals to capture / build**
 
-| Asset                                                                     | Source                      |
-| ------------------------------------------------------------------------- | --------------------------- |
-| Crowded AIS traffic over cables/pipelines (no SeaScope UI)                | Slide art / stock / ops map |
-| Watch console screenshot (Needs attention + Case / Why)                   | Live `/watch` with Demo on  |
-| Watch console / Demo frame (AIS-dark or mismatched track)                 | Live `/watch` with Demo on  |
-| Engine diagram v1 — feeds in → classification & evaluation → risk out     | Slide art                   |
-| Engine diagram v2 — same diagram; partner sensor network joins the inputs | Slide art (reuse v1 layout) |
+| Asset                                                                     | Source                                      |
+| ------------------------------------------------------------------------- | ------------------------------------------- |
+| Crowded AIS traffic over cables/pipelines (no SeaScope UI)                | Slide art / stock / ops map                 |
+| Watch console screenshot (Needs attention + Case / Why)                   | Live `/watch` with Demo on                  |
+| Watch console / Demo frame (AIS-dark or mismatched track)                 | Live `/watch` with Demo on                  |
+| Engine diagram v1 — feeds in → classification & evaluation → risk out     | Coded page `/how-it-works` (also slide art) |
+| Engine diagram v2 — same diagram; partner sensor network joins the inputs | Slide art (reuse v1 layout)                 |
 
 ### Image generation prompts
 
